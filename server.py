@@ -160,6 +160,11 @@ def download_audio(youtube_url):
             'preferredquality': '192'
         }],
         'quiet': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)
@@ -167,7 +172,14 @@ def download_audio(youtube_url):
 
 def get_video_id(youtube_url):
     """Gets YouTube video ID and title without downloading."""
-    ydl_opts = {'quiet': True}
+    ydl_opts = {
+        'quiet': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=False)
         return info['id'], info['title']
@@ -351,7 +363,14 @@ def repair_cache():
             if "title" not in data or not data["title"]:
                 print(f"   Fetching title for {filename}...")
                 try:
-                    ydl_opts = {'quiet': True}
+                    ydl_opts = {
+                        'quiet': True,
+                        'extractor_args': {
+                            'youtube': {
+                                'player_client': ['android', 'web']
+                            }
+                        }
+                    }
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
                         data["title"] = info['title']
