@@ -191,7 +191,7 @@ def fetch_surah_text(surah_number):
 def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
     ydl_opts = get_ydl_opts({
-        'format': 'bestaudio/best',
+        'format': 'best',
         'outtmpl': 'cache/%(id)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
