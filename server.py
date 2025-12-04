@@ -160,9 +160,12 @@ def download_audio(youtube_url):
             'preferredquality': '192'
         }],
         'quiet': True,
+        'no_warnings': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                'player_client': ['ios', 'android', 'web'],
+                'skip': ['hls', 'dash']
             }
         }
     }
@@ -174,9 +177,12 @@ def get_video_id(youtube_url):
     """Gets YouTube video ID and title without downloading."""
     ydl_opts = {
         'quiet': True,
+        'no_warnings': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                'player_client': ['ios', 'android', 'web'],
+                'skip': ['hls', 'dash']
             }
         }
     }
