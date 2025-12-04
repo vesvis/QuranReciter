@@ -62,42 +62,55 @@ else:
     groq_client = Groq(api_key=api_key)
     print("[OK] Groq client initialized successfully")
 
-# Setup YouTube Cookies from Environment Variable
-cookies_content = os.getenv("YOUTUBE_COOKIES")
-if cookies_content:
-    print("[INIT] Found YOUTUBE_COOKIES env var, processing...")
-    
-    # Check if it's already in Netscape format
-    if "# Netscape HTTP Cookie File" in cookies_content or "# HTTP Cookie File" in cookies_content:
-        print("[INIT] Detected Netscape format.")
-        final_cookies = cookies_content
-    else:
-        print("[INIT] Detected raw cookie string, converting to Netscape format...")
-        try:
-            cookie = http.cookies.SimpleCookie()
-            cookie.load(cookies_content)
-            
-            lines = ["# Netscape HTTP Cookie File"]
-            for key, morsel in cookie.items():
-                # domain flag path secure expiration name value
-                # Using .youtube.com and far-future expiration (2038)
-                lines.append(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{key}\t{morsel.value}")
-            
-            final_cookies = "\n".join(lines)
-            print(f"[INIT] Converted {len(cookie)} cookies to Netscape format.")
-        except Exception as e:
-            print(f"[ERROR] Failed to convert cookies: {e}")
-            final_cookies = cookies_content # Fallback
+# Setup YouTube Cookies - Check multiple sources
+# Priority: 1. Render secret file, 2. Local cookies.txt, 3. Environment variable
+COOKIE_FILE_PATH = None
 
-    with open("cookies.txt", "w", encoding="utf-8") as f:
-        f.write(final_cookies)
-    print("[INIT] cookies.txt created successfully")
+# Check for Render secret file first
+if os.path.exists("/etc/secrets/cookies.txt"):
+    COOKIE_FILE_PATH = "/etc/secrets/cookies.txt"
+    print("[INIT] Found cookies at /etc/secrets/cookies.txt (Render secret file)")
+# Check for local cookies.txt
+elif os.path.exists("cookies.txt"):
+    COOKIE_FILE_PATH = "cookies.txt"
+    print("[INIT] Found local cookies.txt")
+# Fall back to environment variable
+else:
+    cookies_content = os.getenv("YOUTUBE_COOKIES")
+    if cookies_content:
+        print("[INIT] Found YOUTUBE_COOKIES env var, processing...")
+        
+        # Check if it's already in Netscape format
+        if "# Netscape HTTP Cookie File" in cookies_content or "# HTTP Cookie File" in cookies_content:
+            print("[INIT] Detected Netscape format.")
+            final_cookies = cookies_content
+        else:
+            print("[INIT] Detected raw cookie string, converting to Netscape format...")
+            try:
+                cookie = http.cookies.SimpleCookie()
+                cookie.load(cookies_content)
+                
+                lines = ["# Netscape HTTP Cookie File"]
+                for key, morsel in cookie.items():
+                    lines.append(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{key}\t{morsel.value}")
+                
+                final_cookies = "\n".join(lines)
+                print(f"[INIT] Converted {len(cookie)} cookies to Netscape format.")
+            except Exception as e:
+                print(f"[ERROR] Failed to convert cookies: {e}")
+                final_cookies = cookies_content
+
+        with open("cookies.txt", "w", encoding="utf-8") as f:
+            f.write(final_cookies)
+        COOKIE_FILE_PATH = "cookies.txt"
+        print("[INIT] cookies.txt created from env var")
 
 def get_ydl_opts(base_opts=None):
     """Returns yt-dlp options with cookie file if available."""
     opts = base_opts or {}
-    if os.path.exists("cookies.txt"):
-        opts['cookiefile'] = "cookies.txt"
+    if COOKIE_FILE_PATH and os.path.exists(COOKIE_FILE_PATH):
+        opts['cookiefile'] = COOKIE_FILE_PATH
+        print(f"[YT-DLP] Using cookie file: {COOKIE_FILE_PATH}")
     return opts
 
 # --- 2. HELPER FUNCTIONS ---
