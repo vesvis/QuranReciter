@@ -464,7 +464,7 @@
             try {
                 // FIRST: Try to load from browser cache (via /cache/{id}.json)
                 // The Service Worker will serve this from audio-cache if available
-                let response = await fetch(`https://quran-reciter.onrender.com/cache/${videoId}.json`);
+                let response = await fetch(`/cache/${videoId}.json`);
 
                 if (response.ok) {
                     console.log("[CACHE] Loaded from browser cache!");
@@ -495,7 +495,7 @@
                     // FALLBACK: If not in browser cache, try server's /recitation endpoint
                     // This will fetch fresh data from server (and rebuild if needed)
                     console.log("[CACHE] Not in browser cache, fetching from server...");
-                    response = await fetch(`https://quran-reciter.onrender.com/recitation/${videoId}`);
+                    response = await fetch(`/recitation/${videoId}`);
 
                     if (!response.ok) {
                         throw new Error("Failed to load recitation from server");
@@ -530,7 +530,7 @@
             processBtn.textContent = "Processing...";
 
             try {
-                const response = await fetch('https://quran-reciter.onrender.com/process', {
+                const response = await fetch('/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url })
