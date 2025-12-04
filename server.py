@@ -410,7 +410,7 @@ def repair_cache():
                         'quiet': True,
                         'extractor_args': {
                             'youtube': {
-                                'player_client': ['ios', 'android_creator', 'android', 'web']
+                                'player_client': ['web']
                             }
                         }
                     })
