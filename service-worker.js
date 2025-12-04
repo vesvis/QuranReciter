@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-reciter-v3';
+const CACHE_NAME = 'quran-reciter-v4';
 const ASSETS_TO_CACHE = [
     '/',
     // '/index.html', // Removed as it is covered by '/' and might cause 404
@@ -62,7 +62,9 @@ self.addEventListener('fetch', (event) => {
                     // Create a new request without the Range header
                     const newHeaders = new Headers(event.request.headers);
                     newHeaders.delete('range');
-                    const newRequest = new Request(event.request.url, {
+                    // Use same-origin URL to avoid CORS issues
+                    const fetchUrl = new URL(url.pathname, self.location.origin).href;
+                    const newRequest = new Request(fetchUrl, {
                         method: event.request.method,
                         headers: newHeaders,
                         mode: 'cors',
