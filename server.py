@@ -61,6 +61,21 @@ else:
     groq_client = Groq(api_key=api_key)
     print("[OK] Groq client initialized successfully")
 
+# Setup YouTube Cookies from Environment Variable
+cookies_content = os.getenv("YOUTUBE_COOKIES")
+if cookies_content:
+    print("[INIT] Found YOUTUBE_COOKIES env var, creating cookies.txt...")
+    with open("cookies.txt", "w", encoding="utf-8") as f:
+        f.write(cookies_content)
+    print("[INIT] cookies.txt created successfully")
+
+def get_ydl_opts(base_opts=None):
+    """Returns yt-dlp options with cookie file if available."""
+    opts = base_opts or {}
+    if os.path.exists("cookies.txt"):
+        opts['cookiefile'] = "cookies.txt"
+    return opts
+
 # --- 2. HELPER FUNCTIONS ---
 
 def normalize_arabic(text):
@@ -151,7 +166,7 @@ def fetch_surah_text(surah_number):
 
 def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
-    ydl_opts = {
+    ydl_opts = get_ydl_opts({
         'format': 'bestaudio/best',
         'outtmpl': 'cache/%(id)s.%(ext)s',
         'postprocessors': [{
@@ -168,14 +183,14 @@ def download_audio(youtube_url):
                 'skip': ['hls', 'dash']
             }
         }
-    }
+    })
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)
         return f"{info['id']}.mp3", info['title']
 
 def get_video_id(youtube_url):
     """Gets YouTube video ID and title without downloading."""
-    ydl_opts = {
+    ydl_opts = get_ydl_opts({
         'quiet': True,
         'no_warnings': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -185,7 +200,7 @@ def get_video_id(youtube_url):
                 'skip': ['hls', 'dash']
             }
         }
-    }
+    })
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=False)
         return info['id'], info['title']
@@ -369,14 +384,14 @@ def repair_cache():
             if "title" not in data or not data["title"]:
                 print(f"   Fetching title for {filename}...")
                 try:
-                    ydl_opts = {
+                    ydl_opts = get_ydl_opts({
                         'quiet': True,
                         'extractor_args': {
                             'youtube': {
                                 'player_client': ['android', 'web']
                             }
                         }
-                    }
+                    })
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
                         data["title"] = info['title']
