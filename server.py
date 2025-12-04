@@ -203,7 +203,7 @@ def download_audio(youtube_url):
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android_creator', 'android', 'web']
+                'player_client': ['web']
             }
         }
     })
@@ -219,7 +219,7 @@ def get_video_id(youtube_url):
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android_creator', 'android', 'web']
+                'player_client': ['web']
             }
         }
     })
