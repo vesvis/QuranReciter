@@ -507,7 +507,7 @@
                     // Cache the JSON file for next time
                     if (data.id) {
                         console.log("[CACHE] Caching files for:", data.id);
-                        fetch(`https://quran-reciter.onrender.com/cache/${data.id}.json`)
+                        fetch(`/cache/${data.id}.json`)
                             .then(r => console.log("[CACHE] JSON cached:", r.status))
                             .catch(e => console.error("[CACHE] JSON cache failed", e));
                     }
@@ -547,7 +547,7 @@
                     console.log("[CACHE] Caching files for:", data.id);
 
                     // Fetch the .json file (triggers SW caching)
-                    fetch(`https://quran-reciter.onrender.com/cache/${data.id}.json`)
+                    fetch(`/cache/${data.id}.json`)
                         .then(r => console.log("[CACHE] JSON cached:", r.status))
                         .catch(e => console.error("[CACHE] JSON cache failed", e));
 
