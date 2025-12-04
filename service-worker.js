@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-reciter-v2';
+const CACHE_NAME = 'quran-reciter-v3';
 const ASSETS_TO_CACHE = [
     '/',
     // '/index.html', // Removed as it is covered by '/' and might cause 404
@@ -60,19 +60,27 @@ self.addEventListener('fetch', (event) => {
                     // We must fetch the FULL file (status 200) to cache it.
 
                     // Create a new request without the Range header
-                    const newRequest = new Request(event.request, {
-                        headers: new Headers(event.request.headers)
+                    const newHeaders = new Headers(event.request.headers);
+                    newHeaders.delete('range');
+                    const newRequest = new Request(event.request.url, {
+                        method: event.request.method,
+                        headers: newHeaders,
+                        mode: 'cors',
+                        credentials: 'same-origin'
                     });
-                    newRequest.headers.delete('range');
 
                     return fetch(newRequest).then((networkResponse) => {
-                        console.log('[SW] Network response status:', networkResponse.status);
+                        console.log('[SW] Network response status:', networkResponse.status, 'for', url.pathname);
                         // Only cache valid 200 responses
                         if (networkResponse.status === 200) {
                             console.log('[SW] Caching file:', url.pathname);
-                            cache.put(event.request, networkResponse.clone())
-                                .then(() => console.log('[SW] Cache put success'))
+                            // Use the original URL as the cache key
+                            const cacheUrl = new URL(url.pathname, self.location.origin).href;
+                            cache.put(cacheUrl, networkResponse.clone())
+                                .then(() => console.log('[SW] Cache put success for:', url.pathname))
                                 .catch(err => console.error('[SW] Cache put failed:', err));
+                        } else {
+                            console.log('[SW] Not caching - status was:', networkResponse.status);
                         }
                         return networkResponse;
                     }).catch(err => {

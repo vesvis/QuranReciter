@@ -1,0 +1,25 @@
+__Secure-YNID	13.YT=F7NUNlJA56VmTwjuv7kHiDkze0qWODkMZvMBO-ubXnuL-syHNPMyoMttu70i3nuRP8yO1VxBpk6UPGa4UvkKEjj0UFgpojSkD3MLsV4VZiUC1PUpcDWwAYHiE_He9hHGoGFTN8j4cupWoh5sj_5_CpnhMxjnkrnhBB6WpaP6pwzj4rkrCXgxNxFNRMDlA0jPw9NRZw-hzsBP7k3HMaiA1HbeI-sYmOoOjZDDEYPR8ko6vKok471aSneO8gS7ZHq6Xfd9SYWHe-SlLtpb_o-NqVmP9xs1IJ9N8KszFxvatm3Pj1u2ynfIWvwR3Vfj4FjO2knVegXy545m1zNdsDVMAA	.youtube.com	/	2026-06-02T02:23:07.065Z	361	✓	✓	None	https://youtube.com		Medium	
+AEC	AaJma5unvKLDIyxPDo3iaOqjtH3b6ETGaNm30gUjHXZm429k8qbX0Iwbwzo	.google.com	/	2026-05-04T23:28:24.474Z	62	✓	✓	Lax			Medium	
+APC	AfxxVi44_yd7PWBG54FvWOhX3IqgDVC-rRQZjik0s43QflSgTf3pEw	.doubleclick.net	/	2026-04-13T23:31:16.330Z	57		✓	None	https://youtube.com	✓	Medium	
+APISID	oAbD-M5QvMssGbJq/A9WIqr2umjd_riQTW	.google.com	/	2026-12-14T16:55:10.312Z	40						High	
+APISID	oAbD-M5QvMssGbJq/A9WIqr2umjd_riQTW	.youtube.com	/	2026-12-14T19:28:57.835Z	40						High	
+ar_debug	1	.doubleclick.net	/	2026-01-03T03:54:02.609Z	9	✓	✓	None			Medium	
+HSID	AdjIpDTyedEN9W_Q2	.google.com	/	2026-12-14T16:55:10.312Z	21	✓					High	
+HSID	AM1RxqnbrhWpxynVd	.youtube.com	/	2026-12-14T19:28:57.835Z	21	✓					High	
+IDE	AHWqTUnOCnxO4NL3LF1nAJQMIBMZM1IfjJsneJPhtprDXx5oaxDtE4Apk6tzCLHBsdc	.doubleclick.net	/	2027-01-08T02:34:57.555Z	70	✓	✓	None			Medium	
+LOGIN_INFO	AFmmF2swRgIhAIRdf7FEuumwn3JeHYke0F3aDeqChw5HhyytXMrwjahIAiEAscs3evVfxaIyyEQdCrFUERCOA-YiZydjB7Bq8eC8y6c:QUQ3MjNmeWdsZWZ3Y25WSjlpRGNCNlF4VzlqRmE3UzM1bkRnX1lzZVQ5QkZXVjhpbnl5MS1WX3dEWVdxcmw1NVY0TEJBVjBpMi1XV3FtQWpFd3RsdXFzc2kxcHFUZ1I4QmhJdmc5UFhjaGo4cXlnaFotLVNPdnJLbWxhVTJBN245TU9QNFF1RkRYRHp4aU9kUHJlUVR5WHdVdWN6ajY3YUlB	.youtube.com	/	2026-10-01T00:55:42.236Z	330	✓	✓	None			Medium	
+NID	526=ESfDC0OrC2KpSJgu-LBJgbNLWQc0M-iTpHIflBvFgVS0AdGN2fbUHSJFR-rPF1ox2kZ4lIIED_XPfIXX9-d2b8tSvrGU3Hxouf_h6gE_vL983-QM4QQ8-vk0ntJdYV0XhSdg0fMREl5g2I1VM5UjTMYGqlPmlvnOF9wyBk4so2LCLl9KY48hngrPlYVt1nBn8PehyZ74QToBmL0eLmcsaBA8WSwLSI5uuavx5Uzd0rGCrdesGg3WpFQH8wLBO1V-Bfr5DkTpxoo2ylJ0gva8nUsP9P5Rmj5trFXYlN3aG0xrNASKaxDZPwNyX8aNFaXpASj2TpJAfasy2MDTsiPZh5EFiQeYQfomVwzekpaP7K_eMm-9MeD5LeGIj6Sw19Ojuljl_Q9v2XwIHT_SytasHA3s-G9fUp6DIXbCDD1TJUZQP6K91bTYO471rk4c3xzcTKG8-t2vAJoGoYP2fQql-aMgCXhN4sRXsls31CSIrnNFy6uHOd3y76qEJxtSBi3UYLPtfNfsuKOZxkuv00TgLv0lPajra_13HVwD0m8ePmJd-tmeY_-4FfLFYA74jzielViYyNAxkktKwXPVrg6z8lI95khJcwpnL2aq7J39a-p9IZola8bexod4S6NsyXeTzyJ6F6g0X2hqUMIGdCPusZP3Jxo00B1q0dRn7D7rcLn1f7g0qpDdyOy0X24UDLd2rDbh1qSF-u761tpSb5Yf8W5odMSyl8UPFWuRSNmOBSKJXMc9srLAwp8sZY87-7vdhDlFosAS372jKnGZ_E2l3AmRnyk9VphclUBUNXev	.google.com	/	2026-06-05T02:22:11.482Z	815	✓	✓	None			Medium	
+PREF	f4=4000000&f6=40000000&tz=America.New_York&f5=20000&f7=100	.youtube.com	/	2027-01-08T04:32:46.183Z	62		✓				Medium	
+receive-cookie-deprecation	1	.doubleclick.net	/	2026-04-13T23:31:16.554Z	27	✓	✓	None	https://youtube.com	✓	Medium	
+SAPISID	E3JuHpqp47blzMNS/A2J2l36WQ2-CXGlsF	.google.com	/	2026-12-14T16:55:10.312Z	41		✓				High	
+SAPISID	E3JuHpqp47blzMNS/A2J2l36WQ2-CXGlsF	.youtube.com	/	2026-12-14T19:28:57.835Z	41		✓				High	
+SEARCH_SAMESITE	CgQIx58B	.google.com	/	2026-05-30T03:41:21.402Z	23			Strict			Medium	
+SID	g.a0003QjSm7oX6qmrDFrU1bB_AMzIBqgg8yfFwnhfY5r8ChxR-Mc1f8sxpY5h1UrjXNfNEvc_8AACgYKAcYSARcSFQHGX2MiWf_eDs_2Z-5nMbf3rZHChRoVAUF8yKrpi1rgvePaCzCuYvDIbAhn0076	.google.com	/	2026-12-14T16:55:10.314Z	156						High	
+SID	g.a0003QjSm90j2ZUbV7fw5D0gPGsaGuC1_BUBWhTEEBvGs6LK2gUfnM-J_cSEt1zs7wFy9hUFewACgYKAV0SARcSFQHGX2MiSQfXOQEIOdiZstpLYhLtcxoVAUF8yKorrFippFCqrulSsUnOGxci0076	.youtube.com	/	2026-12-14T19:28:57.836Z	156						High	
+SIDCC	AKEyXzU-Ew4DxEt6khHOMtEE5x_TrK1maXoYl3a4prAfHqNzml1JAhv7OtzgJqeKhxq0RYcjaQw	.youtube.com	/	2026-12-04T04:32:58.206Z	80						High	
+SIDCC	AKEyXzUz2LxaB6jHF3pbr8b9vxVVwLaUrnSKKxGZRZwLfilSGW0CymUshhGm-GT4_ovlPH4TW10	.google.com	/	2026-12-04T04:32:43.795Z	80						High	
+SSID	A61fwG7KacX_WUrOj	.google.com	/	2026-12-14T16:55:10.312Z	21	✓	✓				High	
+SSID	AmZcQOpeBermmJSD9	.youtube.com	/	2026-12-14T19:28:57.835Z	21	✓	✓				High	
+VISITOR_INFO1_LIVE	dzUuQ9duQjE	.youtube.com	/	2026-06-02T04:32:58.206Z	29	✓	✓	None	https://youtube.com		Medium	
+VISITOR_PRIVACY_METADATA	CgJVUxIEGgAgXg%3D%3D	.youtube.com	/	2026-06-02T04:32:58.206Z	44	✓	✓	None	https://youtube.com		Medium	
+YSC	a2ZT4PTSflY	.youtube.com	/	Session	14	✓	✓	None	https://youtube.com		Medium	
