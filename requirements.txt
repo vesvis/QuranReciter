@@ -3,7 +3,6 @@ uvicorn
 groq
 python-dotenv
 yt-dlp
-pydub
 rapidfuzz
 requests
 static-ffmpeg

@@ -15,8 +15,9 @@ from rapidfuzz import process, fuzz
 from urllib.parse import quote
 from dotenv import load_dotenv
 import re
-from pydub import AudioSegment
+import subprocess
 import math
+
 
 # Load environment variables
 load_dotenv()
@@ -171,33 +172,46 @@ def get_video_id(youtube_url):
         return info['id'], info['title']
 
 def get_audio_duration(audio_filepath):
-    """Get duration of audio file in seconds."""
-    audio = AudioSegment.from_file(audio_filepath)
-    return len(audio) / 1000.0  # Convert milliseconds to seconds
+    """Get duration of audio file in seconds using ffmpeg."""
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
+             '-of', 'default=noprint_wrappers=1:nokey=1', audio_filepath],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return float(result.stdout.strip())
+    except Exception as e:
+        print(f"[ERROR] Could not get audio duration: {e}")
+        return 0
 
 def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
     """
-    Split audio file into chunks to stay under Groq's 25MB limit.
+    Split audio file into chunks using ffmpeg to stay under Groq's 25MB limit.
     Returns list of chunk file paths.
     """
     print(f"[SPLIT] Splitting audio into chunks...")
     
-    audio = AudioSegment.from_file(audio_filepath)
-    duration_ms = len(audio)
-    chunk_duration_ms = chunk_duration_minutes * 60 * 1000
+    duration = get_audio_duration(audio_filepath)
+    chunk_duration_sec = chunk_duration_minutes * 60
+    num_chunks = math.ceil(duration / chunk_duration_sec)
     
     chunks = []
-    num_chunks = math.ceil(duration_ms / chunk_duration_ms)
     
     for i in range(num_chunks):
-        start_ms = i * chunk_duration_ms
-        end_ms = min((i + 1) * chunk_duration_ms, duration_ms)
-        
-        chunk = audio[start_ms:end_ms]
+        start_time = i * chunk_duration_sec
         chunk_path = audio_filepath.replace('.mp3', f'_chunk_{i}.mp3')
-        chunk.export(chunk_path, format="mp3", bitrate="64k")  # Lower bitrate for smaller files
-        chunks.append(chunk_path)
         
+        # Use ffmpeg to extract chunk with lower bitrate
+        subprocess.run(
+            ['ffmpeg', '-i', audio_filepath, '-ss', str(start_time), 
+             '-t', str(chunk_duration_sec), '-b:a', '64k', '-y', chunk_path],
+            capture_output=True,
+            check=True
+        )
+        
+        chunks.append(chunk_path)
         print(f"   Created chunk {i+1}/{num_chunks}: {chunk_path}")
     
     return chunks
