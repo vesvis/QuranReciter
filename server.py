@@ -204,7 +204,7 @@ def fetch_surah_text(surah_number):
 def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
     ydl_opts = get_ydl_opts({
-        'format': 'best',
+        'format': 'bestaudio/best',
         'outtmpl': 'cache/%(id)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -213,12 +213,6 @@ def download_audio(youtube_url):
         }],
         'quiet': True,
         'no_warnings': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['web']
-            }
-        }
     })
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)
@@ -229,12 +223,6 @@ def get_video_id(youtube_url):
     ydl_opts = get_ydl_opts({
         'quiet': True,
         'no_warnings': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['web']
-            }
-        }
     })
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=False)
