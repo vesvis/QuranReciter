@@ -140,7 +140,93 @@ def get_ydl_opts(base_opts=None, use_impersonate=True):
     
     return opts
 
-# ... (helper functions)
+# --- 2. HELPER FUNCTIONS ---
+
+def normalize_arabic(text):
+    """Normalizes Arabic text by removing diacritics and standardizing characters."""
+    # Remove Tashkeel
+    text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
+    # Normalize Alifs
+    text = re.sub(r'[ٱإأآ]', 'ا', text)
+    # Normalize Taa Marbuta
+    text = re.sub(r'ة', 'ه', text)
+    # Normalize Ya
+    text = re.sub(r'ى', 'ي', text)
+    return text
+
+def search_api(text):
+    """Searches the Al Quran Cloud Search API for the given Arabic text."""
+    try:
+        encoded_text = quote(text)
+        url = f"http://api.alquran.cloud/v1/search/{encoded_text}/all/ar"
+        
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            
+            if data.get("data") and data["data"].get("matches") and len(data["data"]["matches"]) > 0:
+                first_match = data["data"]["matches"][0]
+                surah_number = first_match["surah"]["number"]
+                surah_name = first_match["surah"]["englishName"]
+                print(f"[OK] Identified: Surah {surah_number} ({surah_name})")
+                return (surah_number, surah_name)
+        
+        return None
+    except Exception as e:
+        print(f"[ERROR] Request Error: {e}")
+        return None
+
+def identify_surah_via_api(segments, full_text):
+    """Iterates through transcribed segments to find a match in the API."""
+    print("Identifying Surah...")
+    
+    # Try the first few segments individually
+    max_attempts = min(len(segments), 10)
+    
+    for i in range(max_attempts):
+        segment_text = segments[i]["text"].strip()
+        if len(segment_text) < 10:
+            continue
+        
+        # Clean up Bismillah
+        bismillah = "بسم الله الرحمن الرحيم"
+        if segment_text.startswith(bismillah):
+            segment_text = segment_text[len(bismillah):].strip()
+            
+        if len(segment_text) < 5:
+            continue
+        result = search_api(segment_text[2:])
+        if result:
+            return result
+            
+    # Fallback: Try a chunk of the full text
+    return search_api(full_text[:100])
+
+def fetch_surah_text(surah_number):
+    """Downloads the specific Surah text from the API."""
+    try:
+        url = f"http://api.alquran.cloud/v1/surah/{surah_number}/quran-uthmani"
+        print(f"[FETCH] Fetching text for Surah {surah_number}...")
+        
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            
+            surah_data = []
+            for ayah in data["data"]["ayahs"]:
+                surah_data.append({
+                    "surah": surah_number,
+                    "ayah": ayah["numberInSurah"],
+                    "text": ayah["text"]
+                })
+            return surah_data
+            
+        print(f"[ERROR] Error fetching Surah text: Status {response.status_code}")
+        return []
+        
+    except Exception as e:
+        print(f"[ERROR] Error fetching Surah text: {e}")
+        return []
 
 def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
