@@ -73,8 +73,18 @@ COOKIE_FILE_PATH = None
 
 # Check for Render secret file first
 if os.path.exists("/etc/secrets/cookies.txt"):
-    COOKIE_FILE_PATH = "/etc/secrets/cookies.txt"
     print("[INIT] Found cookies at /etc/secrets/cookies.txt (Render secret file)")
+    # Copy to writable location to avoid "Read-only file system" error when yt-dlp tries to update cookies
+    try:
+        with open("/etc/secrets/cookies.txt", "r", encoding="utf-8") as f:
+            secret_cookies = f.read()
+        with open("cookies.txt", "w", encoding="utf-8") as f:
+            f.write(secret_cookies)
+        COOKIE_FILE_PATH = "cookies.txt"
+        print("[INIT] Copied cookies to writable 'cookies.txt'")
+    except Exception as e:
+        print(f"[WARN] Failed to copy secret cookies: {e}")
+        COOKIE_FILE_PATH = "/etc/secrets/cookies.txt"
 # Check for local cookies.txt
 elif os.path.exists("cookies.txt"):
     COOKIE_FILE_PATH = "cookies.txt"
