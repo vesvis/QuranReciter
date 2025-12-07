@@ -2,7 +2,8 @@ fastapi
 uvicorn
 groq
 python-dotenv
-yt-dlp
+yt-dlp>=2024.04.09
+curl-cffi
 rapidfuzz
 requests
 static-ffmpeg

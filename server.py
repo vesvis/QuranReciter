@@ -117,8 +117,8 @@ def get_ydl_opts(base_opts=None):
         opts['cookiefile'] = COOKIE_FILE_PATH
         print(f"[YT-DLP] Using cookie file: {COOKIE_FILE_PATH}")
     
-    # Add a common browser User-Agent to help bypass bot detection
-    opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    # Use impersonate to mimic a real browser (requires curl_cffi installed)
+    opts['impersonate'] = 'chrome'
     
     return opts
 
