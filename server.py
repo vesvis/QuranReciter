@@ -3,6 +3,7 @@ import asyncio
 import json
 import uvicorn
 from groq import Groq
+import google.generativeai as genai
 import yt_dlp
 import requests
 import static_ffmpeg
@@ -66,6 +67,17 @@ if not api_key:
 else:
     groq_client = Groq(api_key=api_key)
     print("[OK] Groq client initialized successfully")
+
+# Initialize Gemini client
+gemini_key = os.getenv("GEMINI_API_KEY")
+if not gemini_key:
+    print("[WARN] GEMINI_API_KEY not found. Gemini transcription will be unavailable.")
+    genai_client = None
+else:
+    genai.configure(api_key=gemini_key)
+    # Use the Flash model which is currently free
+    genai_model = genai.GenerativeModel('gemini-1.5-flash')
+    print("[OK] Gemini client initialized successfully")
 
 # Setup YouTube Cookies - Check multiple sources
 # Priority: 1. Render secret file, 2. Local cookies.txt, 3. Environment variable
@@ -385,6 +397,7 @@ def transcribe_with_groq(audio_filepath):
             
             # Extract segments
             if hasattr(transcription, 'segments') and transcription.segments:
+                print("Transcription segments : ", transcription.segments) 
                 for seg in transcription.segments:
                     # Handle both dict and object formats
                     seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
@@ -420,6 +433,52 @@ def transcribe_with_groq(audio_filepath):
             except:
                 pass
         print(f"[ERROR] Groq transcription failed: {e}")
+        raise
+
+def transcribe_with_gemini(audio_filepath):
+    """Transcribe audio using Google Gemini 1.5 Flash."""
+    if not gemini_key:
+        raise Exception("Gemini API key not found. Please set GEMINI_API_KEY")
+    
+    print(f"[TRANSCRIBE] Sending to Gemini API (1.5 Flash)...")
+    
+    try:
+        # Upload the file to Gemini
+        print(f"[GEMINI] Uploading file...")
+        audio_file = genai.upload_file(path=audio_filepath)
+        print(f"[GEMINI] File uploaded: {audio_file.name}")
+        
+        # Generate content
+        print(f"[GEMINI] Generating transcription...")
+        response = genai_model.generate_content(
+            [
+                "Transcribe this audio file into Arabic text. Return the result as a JSON object with a 'segments' list, where each segment has 'text', 'start' (in seconds), and 'end' (in seconds). Ensure the JSON is valid.",
+                audio_file
+            ],
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        # Parse response
+        result = json.loads(response.text)
+        
+        # Cleanup
+        try:
+            audio_file.delete()
+        except:
+            pass
+            
+        segments = result.get("segments", [])
+        
+        # Create a response object compatible with our pipeline
+        class TranscriptionResult:
+            def __init__(self, segments):
+                self.segments = segments
+                self.text = " ".join([s["text"] for s in segments])
+        
+        return TranscriptionResult(segments)
+        
+    except Exception as e:
+        print(f"[ERROR] Gemini transcription failed: {e}")
         raise
 
 def repair_cache():
@@ -567,11 +626,16 @@ async def process_video(request: VideoRequest):
             
         # 3. Transcribe if not cached
         if not transcription_data:
-            print("Step 2: Transcribing with Groq API...")
-            
-            # Run blocking transcription in thread pool
-            loop = asyncio.get_event_loop()
-            transcription = await loop.run_in_executor(None, transcribe_with_groq, audio_filepath)
+            # Decide which provider to use
+            if gemini_key:
+                print("Step 2: Transcribing with Gemini API...")
+                loop = asyncio.get_event_loop()
+                transcription = await loop.run_in_executor(None, transcribe_with_gemini, audio_filepath)
+            else:
+                print("Step 2: Transcribing with Groq API...")
+                loop = asyncio.get_event_loop()
+                transcription = await loop.run_in_executor(None, transcribe_with_groq, audio_filepath)
+
             
             # Extract segments from Groq response
             segments = []
