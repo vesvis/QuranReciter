@@ -367,53 +367,38 @@
             select.innerHTML = '<option value="">Select a previous recitation...</option>';
 
             try {
-                // Open the audio-cache (where .json files are stored)
-                const cache = await caches.open('audio-cache');
-                const requests = await cache.keys();
-
-                const history = [];
-
-                // Find all .json files
-                for (const request of requests) {
-                    if (request.url.endsWith('.json')) {
-                        try {
-                            const response = await cache.match(request);
-                            const data = await response.json();
-
-                            // Extract video ID from URL (e.g., /cache/Kff-hAKbFmc.json)
-                            const urlParts = request.url.split('/');
-                            const filename = urlParts[urlParts.length - 1];
-                            const videoId = filename.replace('.json', '');
-
-                            history.push({
-                                id: videoId,
-                                surah_name: data.surah_name,
-                                title: data.title
-                            });
-                        } catch (e) {
-                            console.warn("[HISTORY] Failed to parse cached JSON:", request.url, e);
-                        }
-                    }
-                }
-
-                if (history.length === 0) {
-                    console.log("[HISTORY] No cached recitations found");
+                // Fetch history from server
+                const response = await fetch('/history');
+                if (!response.ok) {
+                    console.warn("[HISTORY] Failed to fetch history from server");
                     return;
                 }
 
-                console.log("[HISTORY] Found", history.length, "cached recitations");
+                const history = await response.json();
 
-                // Sort alphabetically by Surah name
-                history.sort((a, b) => a.surah_name.localeCompare(b.surah_name));
+                if (history.length === 0) {
+                    console.log("[HISTORY] No cached recitations found on server");
+                    return;
+                }
+
+                console.log("[HISTORY] Found", history.length, "recitations from server");
 
                 history.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.id;
-                    option.textContent = `${item.surah_name} - ${item.title}`;
+                    // Display Surah Name and Title (or just Title if Surah is unknown)
+                    let label = item.surah_name;
+                    if (item.surah_number) {
+                        label = `${item.surah_number}. ${label}`;
+                    }
+                    if (item.title) {
+                        label += ` - ${item.title}`;
+                    }
+                    option.textContent = label;
                     select.appendChild(option);
                 });
             } catch (e) {
-                console.error("[HISTORY] Failed to load from cache:", e);
+                console.error("[HISTORY] Failed to load history:", e);
             }
         }
 
