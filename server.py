@@ -469,6 +469,7 @@ def transcribe_with_gemini(audio_filepath):
         4. If the segment is in a language different than English, also provide the English translation.
         5. Identify the primary emotion of the speaker in this segment. You MUST choose exactly one of the following: Happy, Sad, Angry, Neutral.
         6. Provide a brief summary of the entire audio at the beginning.
+        7. Identify the Surah (chapter) of the Quran being recited, if applicable. Provide the Surah Name (transliterated or English) and the Surah Number.
         """
 
         # Generate content
@@ -495,6 +496,14 @@ def transcribe_with_gemini(audio_filepath):
                 response_schema=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
+                        "surah_name": types.Schema(
+                            type=types.Type.STRING,
+                            description="Name of the Surah identified (e.g. Al-Fatiha)",
+                        ),
+                        "surah_number": types.Schema(
+                            type=types.Type.INTEGER,
+                            description="Number of the Surah identified (1-114)",
+                        ),
                         "summary": types.Schema(
                             type=types.Type.STRING,
                             description="A concise summary of the audio content.",
@@ -560,11 +569,13 @@ def transcribe_with_gemini(audio_filepath):
 
         # Create a response object compatible with our pipeline
         class TranscriptionResult:
-            def __init__(self, segments):
+            def __init__(self, segments, surah_name=None, surah_number=None):
                 self.segments = segments
                 self.text = " ".join([s["text"] for s in segments])
+                self.surah_name = surah_name
+                self.surah_number = surah_number
         
-        return TranscriptionResult(processed_segments)
+        return TranscriptionResult(processed_segments, result.get("surah_name"), result.get("surah_number"))
         
     except Exception as e:
         print(f"[ERROR] Gemini transcription failed: {e}")
@@ -758,11 +769,21 @@ async def process_video(request: VideoRequest):
             print(f"[OK] Transcription complete: {len(segments)} segments")
             
             # Identify Surah
-            result = identify_surah_via_api(segments, full_text)
-            if not result:
-                raise HTTPException(status_code=404, detail="Could not identify Surah from audio.")
+            surah_id = None
+            surah_name = None
             
-            surah_id, surah_name = result
+            # Use Gemini's identified Surah if available
+            if hasattr(transcription, 'surah_number') and transcription.surah_number:
+                surah_id = transcription.surah_number
+                surah_name = transcription.surah_name
+                print(f"[OK] Gemini identified: Surah {surah_id} ({surah_name})")
+            
+            # Fallback to API search if Gemini didn't identify it
+            if not surah_id:
+                result = identify_surah_via_api(segments, full_text)
+                if not result:
+                    raise HTTPException(status_code=404, detail="Could not identify Surah from audio.")
+                surah_id, surah_name = result
             
             transcription_data = {
                 "surah_id": surah_id,
