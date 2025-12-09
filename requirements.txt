@@ -7,4 +7,4 @@ curl-cffi
 rapidfuzz
 requests
 static-ffmpeg
-google-generativeai
+google-genai
