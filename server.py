@@ -76,7 +76,7 @@ if not gemini_key:
 else:
     genai.configure(api_key=gemini_key)
     # Use the Flash model which is currently free
-    genai_model = genai.GenerativeModel('gemini-1.5-flash')
+    genai_model = genai.GenerativeModel('gemini-flash-latest')
     print("[OK] Gemini client initialized successfully")
 
 # Setup YouTube Cookies - Check multiple sources
