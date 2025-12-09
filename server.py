@@ -458,6 +458,8 @@ def transcribe_with_gemini(audio_filepath):
             generation_config={"response_mime_type": "application/json"}
         )
         
+        print(f"[GEMINI DEBUG] Raw Response: {response.text}")
+
         # Parse response
         result = json.loads(response.text)
         
@@ -468,6 +470,8 @@ def transcribe_with_gemini(audio_filepath):
             pass
             
         segments = result.get("segments", [])
+        print(f"[GEMINI DEBUG] Parsed Segments: {len(segments)} segments found")
+        # print(f"[GEMINI DEBUG] Segments: {json.dumps(segments, ensure_ascii=False)}")
         
         # Create a response object compatible with our pipeline
         class TranscriptionResult:
