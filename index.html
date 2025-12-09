@@ -198,34 +198,42 @@
             }
         }
 
+        // --- Helper: Robust Arabic Normalization ---
+        // Removes diacritics (Tashkeel) and unifies variations of Alif, Ya, etc.
         function normalizeArabic(text) {
-            // Remove diacritics and normalize characters
+            if (!text) return "";
             return text
-                .replace(/[\u064B-\u065F\u0670]/g, '') // Remove diacritics
-                .replace(/[ٱإأآ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/[ىي]/g, 'ي') // Normalize Ya/Alif Maqsura
-                .replace(/ؤ/g, 'و')
-                .replace(/ئ/g, 'ي')
-                .replace(/\s+/g, ' ')
+                // Remove Tashkeel (all diacritics like Fatha, Kasra, Damma, Shadda, etc.)
+                .replace(/[\u064B-\u065F\u0670]/g, "")
+                // Normalize all forms of Alif (آ, إ, أ) to bare Alif (ا)
+                .replace(/[آإأ]/g, "ا")
+                // Normalize Ta-Marbuta (ة) to Ha (ه)
+                .replace(/ة/g, "ه")
+                // Normalize Alif Maqsura (ى) to Ya (ي)
+                .replace(/ى/g, "ي")
+                // Remove Tatweel (stretching character used in calligraphy)
+                .replace(/\u0640/g, "")
                 .trim();
         }
 
-        // Levenshtein distance for fuzzy matching
+        // --- Helper: Levenshtein Distance ---
         function levenshtein(a, b) {
             if (a.length === 0) return b.length;
             if (b.length === 0) return a.length;
 
             const matrix = [];
 
+            // Initialize first column
             for (let i = 0; i <= b.length; i++) {
                 matrix[i] = [i];
             }
 
+            // Initialize first row
             for (let j = 0; j <= a.length; j++) {
                 matrix[0][j] = j;
             }
 
+            // Fill matrix
             for (let i = 1; i <= b.length; i++) {
                 for (let j = 1; j <= a.length; j++) {
                     if (b.charAt(i - 1) === a.charAt(j - 1)) {
@@ -233,10 +241,8 @@
                     } else {
                         matrix[i][j] = Math.min(
                             matrix[i - 1][j - 1] + 1, // substitution
-                            Math.min(
-                                matrix[i][j - 1] + 1, // insertion
-                                matrix[i - 1][j] + 1 // deletion
-                            )
+                            matrix[i][j - 1] + 1,     // insertion
+                            matrix[i - 1][j] + 1      // deletion
                         );
                     }
                 }
@@ -245,11 +251,15 @@
             return matrix[b.length][a.length];
         }
 
+        // --- Main Function: Build Timeline ---
         function buildTimeline(segments, surahText) {
             console.log("[TIMELINE] Building timeline from", segments.length, "segments and", surahText.length, "ayahs");
+
             if (!segments || !surahText) return [];
 
             const timeline = [];
+
+            // Pre-normalize the Surah text once for performance
             const normalizedSurah = surahText.map(ayah => ({
                 ...ayah,
                 normalized: normalizeArabic(ayah.text)
@@ -257,62 +267,89 @@
 
             let matchCount = 0;
 
+            // 1. STATE TRACKING: Keep track of where we are in the Surah.
+            // We start at Ayah index 0. We will never search before this index.
+            let currentAyahIndex = 0;
+
+            // 2. WINDOW CONFIG: How many Ayahs ahead should we look?
+            // 5 is usually safe to handle pauses or skipped segments.
+            const LOOKAHEAD_WINDOW = 5;
+
             for (const segment of segments) {
                 const heardText = segment.text || '';
-                if (heardText.trim().length < 5) continue;
+                // Skip very short noise segments (less than 3 chars)
+                if (heardText.trim().length < 3) continue;
 
-                const normalized = normalizeArabic(heardText);
+                const normalizedSegment = normalizeArabic(heardText);
 
-                // Find best match
+                // Variables to track the best match found within our specific WINDOW
                 let bestMatch = null;
                 let bestScore = 0; // Higher is better
+                let bestMatchIndex = -1;
 
-                for (let i = 0; i < normalizedSurah.length; i++) {
+                // Constraint: Only search from currentAyahIndex up to (current + Window)
+                // This ensures O(1) performance instead of O(N) per segment.
+                const searchEnd = Math.min(currentAyahIndex + LOOKAHEAD_WINDOW, normalizedSurah.length);
+
+                for (let i = currentAyahIndex; i < searchEnd; i++) {
                     const ayahNorm = normalizedSurah[i].normalized;
 
-                    // 1. Exact containment (Best)
-                    if (ayahNorm.includes(normalized)) {
-                        const score = (normalized.length / ayahNorm.length) * 100 + 50; // Boosted
+                    // Strategy A: Exact Containment (Fastest & Most Accurate)
+                    if (ayahNorm.includes(normalizedSegment)) {
+                        // Calculate score: Base 50 + Boost based on how much of the Ayah is covered
+                        const score = (normalizedSegment.length / ayahNorm.length) * 100 + 50;
                         if (score > bestScore) {
                             bestScore = score;
                             bestMatch = surahText[i];
+                            bestMatchIndex = i;
                         }
+                        // If we find an exact match inside this Ayah, we prefer it over fuzzy matches
                         continue;
                     }
 
-                    // 2. Fuzzy Match (Levenshtein)
-                    // Only check if lengths are somewhat similar to avoid expensive calc on totally wrong pairs
-                    if (Math.abs(normalized.length - ayahNorm.length) < Math.max(normalized.length, ayahNorm.length) * 0.5) {
-                        const distance = levenshtein(normalized, ayahNorm);
-                        const maxLength = Math.max(normalized.length, ayahNorm.length);
+                    // Strategy B: Fuzzy Match (Levenshtein)
+                    // Optimization: Skip expensive calculation if lengths are wildly different
+                    const lenDiff = Math.abs(normalizedSegment.length - ayahNorm.length);
+                    if (lenDiff < Math.max(normalizedSegment.length, ayahNorm.length) * 0.6) {
+                        const distance = levenshtein(normalizedSegment, ayahNorm);
+                        const maxLength = Math.max(normalizedSegment.length, ayahNorm.length);
                         const similarity = ((maxLength - distance) / maxLength) * 100;
 
-                        if (similarity > 70 && similarity > bestScore) { // Threshold 70%
+                        if (similarity > 60 && similarity > bestScore) {
                             bestScore = similarity;
                             bestMatch = surahText[i];
+                            bestMatchIndex = i;
                         }
                     }
 
-                    // 3. Substring Fuzzy Match (for short segments in long ayahs)
-                    // If segment is much shorter than ayah, check if it fuzzy matches ANY part of the ayah
-                    // (Simplified: check word overlap)
-                    if (normalized.length < ayahNorm.length * 0.5) {
-                        const segWords = normalized.split(' ');
+                    // Strategy C: Word Overlap (Backup for short segments or heavy noise)
+                    if (normalizedSegment.length < ayahNorm.length * 0.5) {
+                        const segWords = normalizedSegment.split(' ');
                         const ayahWords = ayahNorm.split(' ');
                         let wordMatches = 0;
                         for (const w of segWords) {
-                            if (ayahWords.includes(w)) wordMatches++;
+                            // Check words longer than 2 chars to avoid matching 'in', 'al', etc.
+                            if (w.length > 2 && ayahWords.includes(w)) wordMatches++;
                         }
                         const wordScore = (wordMatches / segWords.length) * 100;
-                        if (wordScore > 80 && wordScore > bestScore) { // High threshold for word overlap
+
+                        // Use a stricter threshold (75%) for this heuristic
+                        if (wordScore > 75 && wordScore > bestScore) {
                             bestScore = wordScore;
                             bestMatch = surahText[i];
+                            bestMatchIndex = i;
                         }
                     }
                 }
 
                 if (bestMatch) {
                     matchCount++;
+
+                    // CRITICAL LOGIC: Update the tracker.
+                    // If we matched Ayah 5, the next search will start at Ayah 5.
+                    // It will NEVER search Ayah 1-4 again.
+                    currentAyahIndex = bestMatchIndex;
+
                     timeline.push({
                         surah: bestMatch.surah,
                         ayah: bestMatch.ayah,
@@ -325,7 +362,8 @@
 
             console.log("[TIMELINE] Built timeline with", timeline.length, "entries (matched", matchCount, "segments)");
 
-            // CRITICAL FIX: Merge all segments that match the same ayah
+            // --- Merging Phase ---
+            // Merge consecutive segments that belong to the same Ayah
             const merged = {};
             for (const entry of timeline) {
                 const key = `${entry.surah}-${entry.ayah}`;
@@ -338,7 +376,7 @@
                         end: entry.end
                     };
                 } else {
-                    // Extend the range to include this segment
+                    // Extend the range to include this new segment
                     merged[key].start = Math.min(merged[key].start, entry.start);
                     merged[key].end = Math.max(merged[key].end, entry.end);
                 }
@@ -348,15 +386,19 @@
             mergedTimeline.sort((a, b) => a.start - b.start);
             console.log("[TIMELINE] After merging duplicates:", mergedTimeline.length, "unique ayahs");
 
-            // Fill gaps: Extend end time of each ayah to the start of the next
+            // --- Gap Filling Phase ---
+            // Ensure highlighted regions flow smoothly into each other
             for (let i = 0; i < mergedTimeline.length - 1; i++) {
+                // If there is a gap between this ayah and the next, bridge it
+                // so the highlight doesn't disappear during the pause.
                 if (mergedTimeline[i].end < mergedTimeline[i + 1].start) {
                     mergedTimeline[i].end = mergedTimeline[i + 1].start;
                 }
             }
-            // Extend last segment slightly (e.g. 2 seconds) to ensure it stays highlighted
+
+            // Add a small buffer to the final ayah so it doesn't cut off instantly
             if (mergedTimeline.length > 0) {
-                mergedTimeline[mergedTimeline.length - 1].end += 2;
+                mergedTimeline[mergedTimeline.length - 1].end += 1.5;
             }
 
             return mergedTimeline;
