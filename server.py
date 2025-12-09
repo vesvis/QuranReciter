@@ -3,7 +3,8 @@ import asyncio
 import json
 import uvicorn
 from groq import Groq
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import yt_dlp
 import requests
 import static_ffmpeg
@@ -74,9 +75,7 @@ if not gemini_key:
     print("[WARN] GEMINI_API_KEY not found. Gemini transcription will be unavailable.")
     genai_client = None
 else:
-    genai.configure(api_key=gemini_key)
-    # Use the Flash model which is currently free
-    genai_model = genai.GenerativeModel('gemini-flash-latest')
+    client = genai.Client(api_key=gemini_key)
     print("[OK] Gemini client initialized successfully")
 
 # Setup YouTube Cookies - Check multiple sources
@@ -435,51 +434,137 @@ def transcribe_with_groq(audio_filepath):
         print(f"[ERROR] Groq transcription failed: {e}")
         raise
 
+def parse_timestamp(timestamp_str):
+    """Converts MM:SS or HH:MM:SS timestamp to seconds."""
+    try:
+        parts = timestamp_str.split(':')
+        if len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 3:
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+        return float(timestamp_str)
+    except:
+        return 0.0
+
 def transcribe_with_gemini(audio_filepath):
-    """Transcribe audio using Google Gemini 1.5 Flash."""
+    """Transcribe audio using Google Gemini 2.5 Flash."""
     if not gemini_key:
         raise Exception("Gemini API key not found. Please set GEMINI_API_KEY")
     
-    print(f"[TRANSCRIBE] Sending to Gemini API (1.5 Flash)...")
+    print(f"[TRANSCRIBE] Sending to Gemini API (2.5 Flash)...")
     
     try:
         # Upload the file to Gemini
         print(f"[GEMINI] Uploading file...")
-        audio_file = genai.upload_file(path=audio_filepath)
-        print(f"[GEMINI] File uploaded: {audio_file.name}")
+        uploaded_file = client.files.upload(file=audio_filepath)
+        print(f"[GEMINI] File uploaded: {uploaded_file.uri}")
         
+        prompt = """
+        Process the audio file and generate a detailed transcription.
+
+        Requirements:
+        1. Identify distinct speakers (e.g., Speaker 1, Speaker 2, or names if context allows).
+        2. Provide accurate timestamps for each segment (Format: MM:SS).
+        3. Detect the primary language of each segment.
+        4. If the segment is in a language different than English, also provide the English translation.
+        5. Identify the primary emotion of the speaker in this segment. You MUST choose exactly one of the following: Happy, Sad, Angry, Neutral.
+        6. Provide a brief summary of the entire audio at the beginning.
+        """
+
         # Generate content
         print(f"[GEMINI] Generating transcription...")
-        response = genai_model.generate_content(
-            [
-                "Transcribe this audio file into Arabic text. Return the result as a JSON object with a 'segments' list, where each segment has 'text', 'start' (in seconds), and 'end' (in seconds). Ensure the JSON is valid.",
-                audio_file
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                types.Content(
+                    parts=[
+                        types.Part(
+                            file_data=types.FileData(
+                                file_uri=uploaded_file.uri,
+                                mime_type="audio/mpeg"
+                            )
+                        ),
+                        types.Part(
+                            text=prompt
+                        )
+                    ]
+                )
             ],
-            generation_config={"response_mime_type": "application/json"}
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "summary": types.Schema(
+                            type=types.Type.STRING,
+                            description="A concise summary of the audio content.",
+                        ),
+                        "segments": types.Schema(
+                            type=types.Type.ARRAY,
+                            description="List of transcribed segments with speaker and timestamp.",
+                            items=types.Schema(
+                                type=types.Type.OBJECT,
+                                properties={
+                                    "speaker": types.Schema(type=types.Type.STRING),
+                                    "timestamp": types.Schema(type=types.Type.STRING, description="Timestamp in MM:SS format"),
+                                    "text": types.Schema(type=types.Type.STRING, description="The transcribed text"),
+                                    "language": types.Schema(type=types.Type.STRING),
+                                    "language_code": types.Schema(type=types.Type.STRING),
+                                    "translation": types.Schema(type=types.Type.STRING),
+                                    "emotion": types.Schema(
+                                        type=types.Type.STRING,
+                                        enum=["happy", "sad", "angry", "neutral"]
+                                    ),
+                                },
+                                required=["speaker", "timestamp", "text", "language", "language_code", "emotion"],
+                            ),
+                        ),
+                    },
+                    required=["summary", "segments"],
+                ),
+            ),
         )
         
-        print(f"[GEMINI DEBUG] Raw Response: {response.text}")
+        # print(f"[GEMINI DEBUG] Raw Response: {response.text}")
 
         # Parse response
         result = json.loads(response.text)
         
         # Cleanup
-        try:
-            audio_file.delete()
-        except:
-            pass
+        # Note: The new SDK doesn't have a direct delete method on the uploaded_file object returned by upload()
+        # We would need to use client.files.delete(name=uploaded_file.name) if we wanted to be strict,
+        # but for now we'll rely on Gemini's auto-cleanup or implement it later if needed.
             
-        segments = result.get("segments", [])
-        print(f"[GEMINI DEBUG] Parsed Segments: {len(segments)} segments found")
-        # print(f"[GEMINI DEBUG] Segments: {json.dumps(segments, ensure_ascii=False)}")
+        raw_segments = result.get("segments", [])
+        print(f"[GEMINI DEBUG] Parsed Segments: {len(raw_segments)} segments found")
         
+        # Convert segments to our internal format (parsing timestamps)
+        processed_segments = []
+        for i, seg in enumerate(raw_segments):
+            start_time = parse_timestamp(seg.get("timestamp", "00:00"))
+            
+            # Estimate end time based on next segment or text length
+            if i < len(raw_segments) - 1:
+                next_start = parse_timestamp(raw_segments[i+1].get("timestamp", "00:00"))
+                end_time = next_start
+            else:
+                # For last segment, estimate based on text length (approx 15 chars per second)
+                duration = max(2.0, len(seg.get("text", "")) / 15.0)
+                end_time = start_time + duration
+            
+            processed_segments.append({
+                "text": seg.get("text", ""),
+                "start": start_time,
+                "end": end_time
+            })
+
         # Create a response object compatible with our pipeline
         class TranscriptionResult:
             def __init__(self, segments):
                 self.segments = segments
                 self.text = " ".join([s["text"] for s in segments])
         
-        return TranscriptionResult(segments)
+        return TranscriptionResult(processed_segments)
         
     except Exception as e:
         print(f"[ERROR] Gemini transcription failed: {e}")
