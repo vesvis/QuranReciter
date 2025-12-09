@@ -8,3 +8,4 @@ rapidfuzz
 requests
 static-ffmpeg
 google-genai
+openai

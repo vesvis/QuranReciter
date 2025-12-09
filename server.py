@@ -2,9 +2,7 @@ import os
 import asyncio
 import json
 import uvicorn
-from groq import Groq
-from google import genai
-from google.genai import types
+from openai import OpenAI
 import yt_dlp
 import requests
 import static_ffmpeg
@@ -57,26 +55,17 @@ async def read_root():
     return FileResponse("index.html")
 
 print("--- SERVER STARTUP ---")
-print("Initializing Groq API client...")
+print("Initializing OpenAI API client...")
 
-# Initialize Groq client with API key from environment
-api_key = os.getenv("GROQ_API_KEY")
+# Initialize OpenAI client
+api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    print("[ERROR] GROQ_API_KEY not found in environment variables!")
-    print("Please set GROQ_API_KEY in .env file or environment")
-    groq_client = None
+    print("[ERROR] OPENAI_API_KEY not found in environment variables!")
+    print("Please set OPENAI_API_KEY in .env file or environment")
+    client = None
 else:
-    groq_client = Groq(api_key=api_key)
-    print("[OK] Groq client initialized successfully")
-
-# Initialize Gemini client
-gemini_key = os.getenv("GEMINI_API_KEY")
-if not gemini_key:
-    print("[WARN] GEMINI_API_KEY not found. Gemini transcription will be unavailable.")
-    genai_client = None
-else:
-    client = genai.Client(api_key=gemini_key)
-    print("[OK] Gemini client initialized successfully")
+    client = OpenAI(api_key=api_key)
+    print("[OK] OpenAI client initialized successfully")
 
 # Setup YouTube Cookies - Check multiple sources
 # Priority: 1. Render secret file, 2. Local cookies.txt, 3. Environment variable
@@ -334,21 +323,23 @@ def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
     
     return chunks
 
-def transcribe_with_groq(audio_filepath):
-    """Transcribe audio using Groq's Whisper API with chunking for large files."""
-    if not groq_client:
-        raise Exception("Groq client not initialized. Please set GROQ_API_KEY")
+def transcribe_with_openai(audio_filepath):
+    """Transcribe audio using OpenAI Whisper-1 and analyze with GPT-4o-mini."""
+    if not client:
+        raise Exception("OpenAI client not initialized. Please set OPENAI_API_KEY")
     
-    # Check file size - Groq limit is 25MB
+    # Check file size - OpenAI limit is 25MB
     file_size_mb = os.path.getsize(audio_filepath) / (1024 * 1024)
     print(f"[TRANSCRIBE] Audio file size: {file_size_mb:.2f}MB")
     
     all_segments = []
     chunk_files = []
+    full_text_builder = []
     
     try:
+        # Step 1: Transcription (Whisper-1)
         # If file is too large, split into chunks
-        if file_size_mb > 20:  # Use 20MB threshold to be safe
+        if file_size_mb > 24: 
             print(f"[TRANSCRIBE] File too large, splitting into chunks...")
             chunk_files = split_audio_chunks(audio_filepath, chunk_duration_minutes=10)
             
@@ -357,9 +348,9 @@ def transcribe_with_groq(audio_filepath):
                 print(f"[TRANSCRIBE] Processing chunk {i+1}/{len(chunk_files)}...")
                 
                 with open(chunk_path, "rb") as audio_file:
-                    transcription = groq_client.audio.transcriptions.create(
+                    transcription = client.audio.transcriptions.create(
                         file=audio_file,
-                        model="whisper-large-v3",
+                        model="whisper-1",
                         language="ar",
                         response_format="verbose_json",
                         temperature=0.0
@@ -369,9 +360,9 @@ def transcribe_with_groq(audio_filepath):
                 chunk_offset = i * 10 * 60  # 10 minutes per chunk in seconds
                 
                 # Extract segments with adjusted timestamps
-                if hasattr(transcription, 'segments') and transcription.segments:
+                if hasattr(transcription, 'segments'):
                     for seg in transcription.segments:
-                        # Handle both dict and object formats
+                        # Handle both dict and object formats if needed (OpenAI returns objects usually)
                         seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
                         seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
                         seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
@@ -381,24 +372,25 @@ def transcribe_with_groq(audio_filepath):
                             "start": seg_start + chunk_offset,
                             "end": seg_end + chunk_offset
                         })
+                        full_text_builder.append(seg_text)
+                    full_text_builder.append(" ") # Space between chunks
         else:
             # File is small enough, transcribe directly
-            print(f"[TRANSCRIBE] Sending to Groq API...")
+            print(f"[TRANSCRIBE] Sending to OpenAI Whisper API...")
             
             with open(audio_filepath, "rb") as audio_file:
-                transcription = groq_client.audio.transcriptions.create(
+                transcription = client.audio.transcriptions.create(
                     file=audio_file,
-                    model="whisper-large-v3",
+                    model="whisper-1",
                     language="ar",
                     response_format="verbose_json",
                     temperature=0.0
                 )
             
             # Extract segments
-            if hasattr(transcription, 'segments') and transcription.segments:
-                print("Transcription segments : ", transcription.segments) 
+            if hasattr(transcription, 'segments'):
+                print(f"[TRANSCRIBE] Received {len(transcription.segments)} segments.")
                 for seg in transcription.segments:
-                    # Handle both dict and object formats
                     seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
                     seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
                     seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
@@ -408,6 +400,7 @@ def transcribe_with_groq(audio_filepath):
                         "start": seg_start,
                         "end": seg_end
                     })
+                    full_text_builder.append(seg_text)
         
         # Clean up chunk files if created
         for chunk_file in chunk_files:
@@ -416,13 +409,54 @@ def transcribe_with_groq(audio_filepath):
             except:
                 pass
         
-        # Create a response object similar to Groq's response
+        full_text = "".join(full_text_builder)
+        
+        # Step 2: Analysis (GPT-4o-mini)
+        print(f"[ANALYZE] Identifying Surah with GPT-4o-mini...")
+        
+        # We only need the first ~4000 chars to identify the Surah usually
+        analysis_text = full_text[:4000]
+        
+        system_prompt = "You are a Quran expert. Extract the Surah information from the provided Arabic text."
+        user_prompt = f"""
+        Analyze the following Quranic recitation text and provide:
+        1. Surah Number (1-114)
+        2. Surah Name (English/Transliterated, e.g. Al-Fatiha)
+        3. A brief summary of the content (in English)
+
+        Text to analyze: 
+        {analysis_text}
+
+        Respond in strictly valid JSON format: {{ "surah_number": INT, "surah_name": STR, "summary": STR }}
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        analysis_content = completion.choices[0].message.content
+        print(f"[ANALYZE] Raw response: {analysis_content}")
+        analysis_data = json.loads(analysis_content)
+        
+        surah_number = analysis_data.get("surah_number")
+        surah_name = analysis_data.get("surah_name")
+        summary = analysis_data.get("summary")
+
+        # Create a response object similar to our previous structure
         class TranscriptionResult:
-            def __init__(self, segments):
+            def __init__(self, segments, surah_name, surah_number, summary):
                 self.segments = segments
                 self.text = " ".join([s["text"] for s in segments])
+                self.surah_name = surah_name
+                self.surah_number = surah_number
+                self.summary = summary
         
-        return TranscriptionResult(all_segments)
+        return TranscriptionResult(all_segments, surah_name, surah_number, summary)
         
     except Exception as e:
         # Clean up chunk files on error
@@ -431,154 +465,7 @@ def transcribe_with_groq(audio_filepath):
                 os.remove(chunk_file)
             except:
                 pass
-        print(f"[ERROR] Groq transcription failed: {e}")
-        raise
-
-def parse_timestamp(timestamp_str):
-    """Converts MM:SS or HH:MM:SS timestamp to seconds."""
-    try:
-        parts = timestamp_str.split(':')
-        if len(parts) == 2:
-            return float(parts[0]) * 60 + float(parts[1])
-        elif len(parts) == 3:
-            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
-        return float(timestamp_str)
-    except:
-        return 0.0
-
-def transcribe_with_gemini(audio_filepath):
-    """Transcribe audio using Google Gemini 2.5 Flash."""
-    if not gemini_key:
-        raise Exception("Gemini API key not found. Please set GEMINI_API_KEY")
-    
-    print(f"[TRANSCRIBE] Sending to Gemini API (2.5 Flash)...")
-    
-    try:
-        # Upload the file to Gemini
-        print(f"[GEMINI] Uploading file...")
-        uploaded_file = client.files.upload(file=audio_filepath)
-        print(f"[GEMINI] File uploaded: {uploaded_file.uri}")
-        
-        prompt = """
-        Process the audio file and generate a detailed transcription.
-
-        Requirements:
-        1. Identify distinct speakers (e.g., Speaker 1, Speaker 2, or names if context allows).
-        2. Provide accurate timestamps for each segment (Format: MM:SS).
-        3. Detect the primary language of each segment.
-        4. If the segment is in a language different than English, also provide the English translation.
-        5. Identify the primary emotion of the speaker in this segment. You MUST choose exactly one of the following: Happy, Sad, Angry, Neutral.
-        6. Provide a brief summary of the entire audio at the beginning.
-        7. Identify the Surah (chapter) of the Quran being recited, if applicable. Provide the Surah Name (transliterated or English) and the Surah Number.
-        """
-
-        # Generate content
-        print(f"[GEMINI] Generating transcription...")
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                types.Content(
-                    parts=[
-                        types.Part(
-                            file_data=types.FileData(
-                                file_uri=uploaded_file.uri,
-                                mime_type="audio/mpeg"
-                            )
-                        ),
-                        types.Part(
-                            text=prompt
-                        )
-                    ]
-                )
-            ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=types.Schema(
-                    type=types.Type.OBJECT,
-                    properties={
-                        "surah_name": types.Schema(
-                            type=types.Type.STRING,
-                            description="Name of the Surah identified (e.g. Al-Fatiha)",
-                        ),
-                        "surah_number": types.Schema(
-                            type=types.Type.INTEGER,
-                            description="Number of the Surah identified (1-114)",
-                        ),
-                        "summary": types.Schema(
-                            type=types.Type.STRING,
-                            description="A concise summary of the audio content.",
-                        ),
-                        "segments": types.Schema(
-                            type=types.Type.ARRAY,
-                            description="List of transcribed segments with speaker and timestamp.",
-                            items=types.Schema(
-                                type=types.Type.OBJECT,
-                                properties={
-                                    "speaker": types.Schema(type=types.Type.STRING),
-                                    "timestamp": types.Schema(type=types.Type.STRING, description="Timestamp in MM:SS format"),
-                                    "text": types.Schema(type=types.Type.STRING, description="The transcribed text"),
-                                    "language": types.Schema(type=types.Type.STRING),
-                                    "language_code": types.Schema(type=types.Type.STRING),
-                                    "translation": types.Schema(type=types.Type.STRING),
-                                    "emotion": types.Schema(
-                                        type=types.Type.STRING,
-                                        enum=["happy", "sad", "angry", "neutral"]
-                                    ),
-                                },
-                                required=["speaker", "timestamp", "text", "language", "language_code", "emotion"],
-                            ),
-                        ),
-                    },
-                    required=["summary", "segments"],
-                ),
-            ),
-        )
-        
-        # print(f"[GEMINI DEBUG] Raw Response: {response.text}")
-
-        # Parse response
-        result = json.loads(response.text)
-        
-        # Cleanup
-        # Note: The new SDK doesn't have a direct delete method on the uploaded_file object returned by upload()
-        # We would need to use client.files.delete(name=uploaded_file.name) if we wanted to be strict,
-        # but for now we'll rely on Gemini's auto-cleanup or implement it later if needed.
-            
-        raw_segments = result.get("segments", [])
-        print(f"[GEMINI DEBUG] Parsed Segments: {len(raw_segments)} segments found")
-        
-        # Convert segments to our internal format (parsing timestamps)
-        processed_segments = []
-        for i, seg in enumerate(raw_segments):
-            start_time = parse_timestamp(seg.get("timestamp", "00:00"))
-            
-            # Estimate end time based on next segment or text length
-            if i < len(raw_segments) - 1:
-                next_start = parse_timestamp(raw_segments[i+1].get("timestamp", "00:00"))
-                end_time = next_start
-            else:
-                # For last segment, estimate based on text length (approx 15 chars per second)
-                duration = max(2.0, len(seg.get("text", "")) / 15.0)
-                end_time = start_time + duration
-            
-            processed_segments.append({
-                "text": seg.get("text", ""),
-                "start": start_time,
-                "end": end_time
-            })
-
-        # Create a response object compatible with our pipeline
-        class TranscriptionResult:
-            def __init__(self, segments, surah_name=None, surah_number=None):
-                self.segments = segments
-                self.text = " ".join([s["text"] for s in segments])
-                self.surah_name = surah_name
-                self.surah_number = surah_number
-        
-        return TranscriptionResult(processed_segments, result.get("surah_name"), result.get("surah_number"))
-        
-    except Exception as e:
-        print(f"[ERROR] Gemini transcription failed: {e}")
+        print(f"[ERROR] OpenAI processing failed: {e}")
         raise
 
 def repair_cache():
@@ -726,68 +613,34 @@ async def process_video(request: VideoRequest):
             
         # 3. Transcribe if not cached
         if not transcription_data:
-            # Decide which provider to use
-            if gemini_key:
-                print("Step 2: Transcribing with Gemini API...")
-                loop = asyncio.get_event_loop()
-                transcription = await loop.run_in_executor(None, transcribe_with_gemini, audio_filepath)
-            else:
-                print("Step 2: Transcribing with Groq API...")
-                loop = asyncio.get_event_loop()
-                transcription = await loop.run_in_executor(None, transcribe_with_groq, audio_filepath)
+            print("Step 2: Transcribing with OpenAI (Whisper + GPT-4o)...")
+            loop = asyncio.get_event_loop()
+            transcription = await loop.run_in_executor(None, transcribe_with_openai, audio_filepath)
 
-            
-            # Extract segments from Groq response
-            segments = []
-            full_text_parts = []
-            
-            # Groq returns segments in the response
-            if hasattr(transcription, 'segments') and transcription.segments:
-                for seg in transcription.segments:
-                    # Segments are now dictionaries from TranscriptionResult
-                    seg_text = seg["text"] if isinstance(seg, dict) else seg.text
-                    seg_start = seg["start"] if isinstance(seg, dict) else seg.start
-                    seg_end = seg["end"] if isinstance(seg, dict) else seg.end
-                    
-                    segments.append({
-                        "text": seg_text,
-                        "start": seg_start,
-                        "end": seg_end
-                    })
-                    full_text_parts.append(seg_text)
-            else:
-                # Fallback: use full text
-                segments.append({
-                    "text": transcription.text,
-                    "start": 0,
-                    "end": 0
-                })
-                full_text_parts.append(transcription.text)
-            
-            full_text = " ".join(full_text_parts)
+            # Extract segments directly from our result object
+            segments = transcription.segments
+            full_text = transcription.text
+            surah_id = transcription.surah_number
+            surah_name = transcription.surah_name
+            summary = transcription.summary
             
             print(f"[OK] Transcription complete: {len(segments)} segments")
             
-            # Identify Surah
-            surah_id = None
-            surah_name = None
-            
-            # Use Gemini's identified Surah if available
-            if hasattr(transcription, 'surah_number') and transcription.surah_number:
-                surah_id = transcription.surah_number
-                surah_name = transcription.surah_name
-                print(f"[OK] Gemini identified: Surah {surah_id} ({surah_name})")
-            
-            # Fallback to API search if Gemini didn't identify it
-            if not surah_id:
+            if surah_id:
+                print(f"[OK] GPT identified: Surah {surah_id} ({surah_name})")
+            else:
+                # Fallback to API search if GPT didn't identify it (unlikely with specific prompt)
+                print("[WARN] GPT did not identify Surah. Trying API fallback...")
                 result = identify_surah_via_api(segments, full_text)
-                if not result:
+                if result:
+                    surah_id, surah_name = result
+                else:
                     raise HTTPException(status_code=404, detail="Could not identify Surah from audio.")
-                surah_id, surah_name = result
             
             transcription_data = {
                 "surah_id": surah_id,
                 "surah_name": surah_name,
+                "summary": summary,
                 "segments": segments,
                 "text": full_text,
                 "title": title
