@@ -28,14 +28,14 @@
 
         .quran-text {
             font-family: var(--quran-font, 'Amiri', serif);
-            font-size: 2.2rem;
+            font-size: var(--quran-font-size, 2.2rem);
             line-height: 2.8;
             color: #1f2937;
         }
 
         .basmala {
             font-family: var(--quran-font, 'Amiri', serif);
-            font-size: 3rem;
+            font-size: var(--quran-font-size, 2.2rem);
             text-align: center;
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
@@ -134,20 +134,18 @@
                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
             </div>
 
-            <div class="w-full md:w-48">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Font Style</label>
-                <select id="fontSelect" onchange="changeFont()"
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white">
-                    <option value="'Amiri', serif">Amiri (Classic)</option>
-                    <option value="'Scheherazade New', serif">Scheherazade (Traditional)</option>
-                    <option value="'Noto Naskh Arabic', serif">Noto Naskh (Modern)</option>
-                    <option value="'Lateef', serif">Lateef (Cursive)</option>
-                    <option value="'Cairo', sans-serif">Cairo (Bold/Modern)</option>
-                    <option value="'Rakkas', serif">Rakkas (Display)</option>
-                </select>
-            </div>
-
             <div class="flex items-end">
+                <button onclick="openSettings()"
+                    class="p-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition h-[50px] aspect-square flex items-center justify-center mr-2"
+                    title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
                 <button onclick="startProcess()" id="processBtn"
                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition h-[50px]">
                     Process
@@ -177,6 +175,68 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
     </button>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800">Settings</h3>
+                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Font Settings -->
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Appearance</h4>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Font Style</label>
+                        <select id="fontSelect" onchange="changeFont()"
+                            class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white">
+                            <option value="'Amiri', serif">Amiri (Classic)</option>
+                            <option value="'Scheherazade New', serif">Scheherazade (Traditional)</option>
+                            <option value="'Noto Naskh Arabic', serif">Noto Naskh (Modern)</option>
+                            <option value="'Lateef', serif">Lateef (Cursive)</option>
+                            <option value="'Cairo', sans-serif">Cairo (Bold/Modern)</option>
+                            <option value="'Rakkas', serif">Rakkas (Display)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-gray-700">Font Size</label>
+                            <span id="fontSizeValue" class="text-sm text-gray-500">2.2rem</span>
+                        </div>
+                        <input type="range" id="fontSizeSlider" min="1.0" max="4.0" step="0.1" value="2.2"
+                            oninput="changeFontSize()"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Download Management -->
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Manage Downloads</h4>
+                    <div id="downloadsList" class="space-y-2 max-h-48 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">Loading downloads...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-b-xl flex justify-end">
+                <button onclick="closeSettings()"
+                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-4 rounded-lg transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentTimeline = [];
@@ -246,6 +306,17 @@
                     const store = transaction.objectStore('recitations');
                     const request = store.get(id);
                     request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            static async deleteRecitation(id) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recitations'], 'readwrite');
+                    const store = transaction.objectStore('recitations');
+                    const request = store.delete(id);
+                    request.onsuccess = () => resolve();
                     request.onerror = () => reject(request.error);
                 });
             }
@@ -861,21 +932,112 @@
 
         function changeFont() {
             const font = document.getElementById('fontSelect').value;
+            // Add a style tag to override dynamically if needed, but variable is cleaner we already use var(--quran-font)
             document.documentElement.style.setProperty('--quran-font', font);
+            localStorage.setItem('quranFont', font);
+        }
 
-            // Update classes
-            const container = document.getElementById('quranContainer');
-            container.style.fontFamily = font;
+        function changeFontSize() {
+            const size = document.getElementById('fontSizeSlider').value;
+            document.documentElement.style.setProperty('--quran-font-size', `${size}rem`);
+            document.getElementById('fontSizeValue').textContent = `${size}rem`;
+            localStorage.setItem('quranFontSize', size);
+        }
 
-            // Adjust line height for some fonts
-            if (font.includes('Cairo') || font.includes('Noto')) {
-                container.style.lineHeight = '2.2';
-            } else {
-                container.style.lineHeight = '2.8';
+        // --- Settings Modal Logic ---
+        function openSettings() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+            renderDownloadsList();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        async function renderDownloadsList() {
+            const list = document.getElementById('downloadsList');
+            list.innerHTML = '<p class="text-gray-500 text-sm italic">Loading...</p>';
+
+            try {
+                const downloads = await LocalDB.getAllRecitations();
+                if (!downloads || downloads.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm italic">No downloads found on this device.</p>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                downloads.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100';
+
+                    const info = document.createElement('div');
+                    info.className = 'flex-1 min-w-0 mr-3';
+
+                    const title = document.createElement('h5');
+                    title.className = 'text-sm font-medium text-gray-800 truncate';
+                    title.textContent = `${item.surah_name} (${item.surah_number})`;
+
+                    const subtitle = document.createElement('p');
+                    subtitle.className = 'text-xs text-gray-500 truncate';
+                    subtitle.textContent = item.title;
+
+                    const size = document.createElement('p');
+                    size.className = 'text-xs text-gray-400 mt-1';
+                    // Estimate size if blob exists
+                    const mb = item.audioBlob ? (item.audioBlob.size / 1024 / 1024).toFixed(1) : "?";
+                    size.textContent = `${mb} MB • ${new Date(item.timestamp).toLocaleDateString()}`;
+
+                    info.appendChild(title);
+                    info.appendChild(subtitle);
+                    info.appendChild(size);
+
+                    const btn = document.createElement('button');
+                    btn.className = 'text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition';
+                    btn.title = "Delete Download";
+                    btn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    `;
+                    btn.onclick = () => deleteDownload(item.id);
+
+                    div.appendChild(info);
+                    div.appendChild(btn);
+                    list.appendChild(div);
+                });
+            } catch (e) {
+                list.innerHTML = `<p class="text-red-500 text-sm">Error loading downloads: ${e.message}</p>`;
+            }
+        }
+
+        async function deleteDownload(id) {
+            if (!confirm("Are you sure you want to delete this downloaded recitation?")) return;
+
+            try {
+                await LocalDB.deleteRecitation(id);
+                // Refresh list
+                renderDownloadsList();
+                // Refresh main history dropdown
+                loadHistory();
+            } catch (e) {
+                alert("Failed to delete: " + e.message);
             }
         }
 
         window.onload = () => {
+            // Init settings
+            const savedFont = localStorage.getItem('quranFont');
+            if (savedFont) {
+                document.getElementById('fontSelect').value = savedFont;
+                document.documentElement.style.setProperty('--quran-font', savedFont);
+            }
+            const savedSize = localStorage.getItem('quranFontSize');
+            if (savedSize) {
+                document.getElementById('fontSizeSlider').value = savedSize;
+                document.getElementById('fontSizeValue').textContent = `${savedSize}rem`;
+                document.documentElement.style.setProperty('--quran-font-size', `${savedSize}rem`);
+            }
+
             loadHistory();
 
             // Request Persistent Storage
