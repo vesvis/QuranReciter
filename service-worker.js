@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-reciter-v4';
+const CACHE_NAME = 'quran-reciter-v5';
 const ASSETS_TO_CACHE = [
     '/',
     // '/index.html', // Removed as it is covered by '/' and might cause 404
