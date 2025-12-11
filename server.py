@@ -241,6 +241,7 @@ def download_audio(youtube_url):
         }],
         'quiet': True,
         'no_warnings': True,
+        'concurrent_fragment_downloads': 5,
     }
 
     try:
