@@ -182,6 +182,75 @@
         let currentTimeline = [];
         let audioPlayer = document.getElementById('audioPlayer');
 
+        // --- IndexedDB Configuration ---
+        const DB_NAME = 'QuranReciterDB';
+        const DB_VERSION = 1;
+
+        class LocalDB {
+            static async open() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('recitations')) {
+                            const store = db.createObjectStore('recitations', { keyPath: 'id' });
+                            store.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+                });
+            }
+
+            static async saveRecitation(data, audioBlob) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recitations'], 'readwrite');
+                    const store = transaction.objectStore('recitations');
+                    // Create a clean object to store
+                    const item = {
+                        id: data.id,
+                        title: data.title,
+                        surah_name: data.surah_name,
+                        surah_number: data.surah_number || data.surah_id,
+                        summary: data.summary,
+                        segments: data.segments,
+                        text: data.text,
+                        surah_text: data.surah_text,
+                        timeline: data.timeline,
+                        audioBlob: audioBlob, // Store the binary blob
+                        timestamp: Date.now()
+                    };
+                    const request = store.put(item);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            static async getAllRecitations() {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recitations'], 'readonly');
+                    const store = transaction.objectStore('recitations');
+                    const index = store.index('timestamp');
+                    const request = index.getAll();
+                    request.onsuccess = () => resolve(request.result.reverse()); // Newest first
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            static async getRecitation(id) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['recitations'], 'readonly');
+                    const store = transaction.objectStore('recitations');
+                    const request = store.get(id);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        }
+
         async function fetchSurahText(surahId) {
             try {
                 const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}/quran-uthmani`);
@@ -406,75 +475,64 @@
 
         async function loadHistory() {
             const select = document.getElementById('historySelect');
+            // Save current selection if any
+            const currentSelection = select.value;
+
             select.innerHTML = '<option value="">Select a previous recitation...</option>';
 
+            const map = new Map();
+
+            // 1. Local IndexedDB (Highest Priority)
             try {
-                // Fetch history from server
+                const localItems = await LocalDB.getAllRecitations();
+                if (localItems) {
+                    localItems.forEach(item => map.set(item.id, { ...item, source: 'local' }));
+                }
+            } catch (e) { console.warn("[HISTORY] LocalDB error", e); }
+
+            // 2. Server History
+            try {
                 const response = await fetch('/history');
-                if (!response.ok) {
-                    console.warn("[HISTORY] Failed to fetch history from server");
-                    return;
+                if (response.ok) {
+                    const serverItems = await response.json();
+                    serverItems.forEach(item => {
+                        // Only add if not already present from local DB (prefer local because it has blob)
+                        if (!map.has(item.id)) {
+                            map.set(item.id, { ...item, source: 'server' });
+                        }
+                    });
                 }
+            } catch (e) { console.warn("[HISTORY] Server history error", e); }
 
-                const history = await response.json();
+            const allItems = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
 
-                if (history.length === 0) {
-                    console.log("[HISTORY] No cached recitations found on server");
-                    return;
+            if (allItems.length === 0) {
+                console.log("[HISTORY] No recitations found.");
+                return;
+            }
+
+            allItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                let label = item.surah_name;
+                if (item.surah_number) label = `${item.surah_number}. ${label}`;
+                if (item.title) label += ` - ${item.title}`;
+
+                if (item.source === 'local') {
+                    label += ' (Downloaded)';
                 }
+                option.textContent = label;
+                select.appendChild(option);
+            });
 
-                console.log("[HISTORY] Found", history.length, "recitations from server");
-
-                history.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    // Display Surah Name and Title (or just Title if Surah is unknown)
-                    let label = item.surah_name;
-                    if (item.surah_number) {
-                        label = `${item.surah_number}. ${label}`;
-                    }
-                    if (item.title) {
-                        label += ` - ${item.title}`;
-                    }
-                    option.textContent = label;
-                    select.appendChild(option);
-                });
-            } catch (e) {
-                console.error("[HISTORY] Failed to load history:", e);
+            // Restore selection if it still exists
+            if (currentSelection && map.has(currentSelection)) {
+                select.value = currentSelection;
             }
         }
 
-        function saveToHistory(data) {
-            // Get existing history
-            const history = JSON.parse(localStorage.getItem('recitationHistory') || '[]');
-
-            // Check if already exists
-            const existingIndex = history.findIndex(item => item.id === data.id);
-
-            const historyItem = {
-                id: data.id,
-                surah_name: data.surah_name,
-                surah_number: data.surah_number || data.surah_id,
-                title: data.title,
-                timestamp: Date.now()
-            };
-
-            if (existingIndex >= 0) {
-                // Update timestamp
-                history[existingIndex] = historyItem;
-            } else {
-                // Add new
-                history.push(historyItem);
-            }
-
-            // Keep only last 20
-            if (history.length > 20) {
-                history.sort((a, b) => b.timestamp - a.timestamp);
-                history.splice(20);
-            }
-
-            localStorage.setItem('recitationHistory', JSON.stringify(history));
-        }
+        // Deprecated: Old localStorage method removed in favor of IndexedDB
+        // function saveToHistory(data) { ... }
 
         async function loadFromHistory() {
             const select = document.getElementById('historySelect');
@@ -489,14 +547,30 @@
             processBtn.textContent = "Loading...";
 
             try {
-                // FIRST: Try to load from browser cache (via /cache/{id}.json)
-                // The Service Worker will serve this from audio-cache if available
+                // 1. Try Local IndexedDB first (Best for offline)
+                try {
+                    const localData = await LocalDB.getRecitation(videoId);
+                    if (localData && localData.audioBlob) {
+                        console.log("[CACHE] Loaded from IndexedDB!");
+
+                        // Create a Blob URL for the audio
+                        localData.audio_url = URL.createObjectURL(localData.audioBlob);
+
+                        initializePlayer(localData);
+                        processBtn.disabled = false;
+                        processBtn.textContent = "Process";
+                        return;
+                    }
+                } catch (e) {
+                    console.warn("[CACHE] IndexedDB lookup failed:", e);
+                }
+
+                // 2. Try Browser Cache / Service Worker (File based)
                 let response = await fetch(`/cache/${videoId}.json`);
 
                 if (response.ok) {
-                    console.log("[CACHE] Loaded from browser cache!");
+                    console.log("[CACHE] Loaded from browser cache/server!");
                     const data = await response.json();
-                    // Add required fields that might be missing from old cache files
                     data.id = videoId;
                     data.audio_url = `/cache/${videoId}.mp3`;
 
@@ -510,33 +584,41 @@
                         }
                     }
 
-                    // If timeline is missing, build it from segments
+                    // If timeline is missing, build it
                     if ((!data.timeline || data.timeline.length === 0) && data.segments && data.surah_text) {
                         console.log("[CACHE] Building timeline from segments...");
                         data.timeline = buildTimeline(data.segments, data.surah_text);
-                        console.log("[CACHE] Built timeline with", data.timeline.length, "entries");
                     }
+
+                    // SAVE TO INDEXEDDB FOR NEXT TIME
+                    // Fetch the audio as blob and save everything
+                    fetch(`/cache/${videoId}.mp3`)
+                        .then(r => r.blob())
+                        .then(blob => {
+                            console.log("[CACHE] Upgrading to IndexedDB...");
+                            LocalDB.saveRecitation(data, blob).then(() => {
+                                console.log("[CACHE] Upgraded successfully");
+                                loadHistory(); // Update UI to show (Downloaded)
+                            });
+                        })
+                        .catch(e => console.warn("Failed to upgrade to IDB", e));
 
                     initializePlayer(data);
                 } else {
-                    // FALLBACK: If not in browser cache, try server's /recitation endpoint
-                    // This will fetch fresh data from server (and rebuild if needed)
-                    console.log("[CACHE] Not in browser cache, fetching from server...");
+                    // 3. Fallback: Fetch from Server API (Dynamic)
+                    console.log("[CACHE] Not in static cache, fetching from API...");
                     response = await fetch(`/recitation/${videoId}`);
-
-                    if (!response.ok) {
-                        throw new Error("Failed to load recitation from server");
-                    }
+                    if (!response.ok) throw new Error("Failed to load recitation from server");
 
                     const data = await response.json();
                     initializePlayer(data);
 
-                    // Cache the JSON file for next time
+                    // Attempt to save to cache
                     if (data.id) {
-                        console.log("[CACHE] Caching files for:", data.id);
-                        fetch(`/cache/${data.id}.json`)
-                            .then(r => console.log("[CACHE] JSON cached:", r.status))
-                            .catch(e => console.error("[CACHE] JSON cache failed", e));
+                        fetch(`/cache/${data.id}.mp3`)
+                            .then(r => r.blob())
+                            .then(blob => LocalDB.saveRecitation(data, blob))
+                            .then(loadHistory);
                     }
                 }
             } catch (e) {
@@ -565,22 +647,26 @@
 
                 if (!response.ok) throw new Error((await response.json()).detail || "Processing failed");
                 const data = await response.json();
-                saveToHistory(data);
+
+                // Initialize player first so user sees progress
                 initializePlayer(data);
-                loadHistory();
 
-                // Background fetch to cache the transcription JSON
-                if (data.id) {
-                    console.log("[CACHE] Caching files for:", data.id);
-
-                    // Fetch the .json file (triggers SW caching)
-                    fetch(`/cache/${data.id}.json`)
-                        .then(r => console.log("[CACHE] JSON cached:", r.status))
-                        .catch(e => console.error("[CACHE] JSON cache failed", e));
-
-                    // The .mp3 file will be cached when the audio player requests it
+                // Background: Save to IndexedDB
+                if (data.id && data.audio_url) {
+                    console.log("[CACHE] Downloading audio for offline storage...");
+                    fetch(data.audio_url)
+                        .then(r => r.blob())
+                        .then(blob => {
+                            console.log("[CACHE] Saving to IndexedDB...");
+                            return LocalDB.saveRecitation(data, blob);
+                        })
+                        .then(() => {
+                            console.log("[CACHE] Saved offline successfully.");
+                            loadHistory(); // Refresh dropdown to show 'Downloaded'
+                        })
+                        .catch(err => console.error("[CACHE] Failed to save offline:", err));
                 } else {
-                    console.warn("[CACHE] No ID in response, cannot cache!");
+                    console.warn("[CACHE] No audio URL to cache.");
                 }
             } catch (e) {
                 alert("Error: " + e.message);
@@ -787,6 +873,14 @@
 
         window.onload = () => {
             loadHistory();
+
+            // Request Persistent Storage
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().then(granted => {
+                    console.log(granted ? "[STORAGE] Persistent storage granted" : "[STORAGE] Persistent storage NOT granted");
+                });
+            }
+
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(reg => console.log('Service Worker Registered', reg))
