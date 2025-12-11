@@ -655,9 +655,13 @@
                 if (data.id && data.audio_url) {
                     console.log("[CACHE] Downloading audio for offline storage...");
                     fetch(data.audio_url)
-                        .then(r => r.blob())
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+                            return response.blob();
+                        })
                         .then(blob => {
-                            console.log("[CACHE] Saving to IndexedDB...");
+                            if (blob.size < 1000) throw new Error(`Blob too small (${blob.size} bytes), likely error page.`);
+                            console.log(`[CACHE] Saving to IndexedDB (${(blob.size / 1024 / 1024).toFixed(2)} MB)...`);
                             return LocalDB.saveRecitation(data, blob);
                         })
                         .then(() => {
