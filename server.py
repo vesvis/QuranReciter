@@ -3,6 +3,7 @@ import asyncio
 import json
 import uvicorn
 from openai import OpenAI
+from groq import Groq
 import yt_dlp
 import requests
 import static_ffmpeg
@@ -66,6 +67,19 @@ if not api_key:
 else:
     client = OpenAI(api_key=api_key)
     print("[OK] OpenAI client initialized successfully")
+
+# Initialize Groq client
+groq_api_key = os.getenv("GROQ_API_KEY")
+if not groq_api_key:
+    print("[WARN] GROQ_API_KEY not found. Groq transcription will not work.")
+    groq_client = None
+else:
+    groq_client = Groq(api_key=groq_api_key)
+    print("[OK] Groq client initialized successfully")
+
+# Configuration
+TRANSCRIPTION_PROVIDER = os.getenv("TRANSCRIPTION_PROVIDER", "GROQ").upper()  # Options: OPENAI, GROQ
+print(f"[CONFIG] Transcription Provider: {TRANSCRIPTION_PROVIDER}")
 
 # Setup YouTube Cookies - Check multiple sources
 # Priority: 1. Render secret file, 2. Local cookies.txt, 3. Environment variable
@@ -469,6 +483,159 @@ def transcribe_with_openai(audio_filepath):
         print(f"[ERROR] OpenAI processing failed: {e}")
         raise
 
+def transcribe_with_groq(audio_filepath):
+    """Transcribe audio using Groq Whisper-large-v3 and analyze with GPT-4o-mini."""
+    if not groq_client:
+        raise Exception("Groq client not initialized. Please set GROQ_API_KEY")
+    
+    # Check file size - Groq limit is 25MB
+    file_size_mb = os.path.getsize(audio_filepath) / (1024 * 1024)
+    print(f"[TRANSCRIBE] Audio file size: {file_size_mb:.2f}MB (Provider: Groq)")
+    
+    all_segments = []
+    chunk_files = []
+    full_text_builder = []
+    
+    try:
+        # Step 1: Transcription (Groq whisper-large-v3)
+        if file_size_mb > 24: 
+            print(f"[TRANSCRIBE] File too large, splitting into chunks...")
+            chunk_files = split_audio_chunks(audio_filepath, chunk_duration_minutes=10)
+            
+            for i, chunk_path in enumerate(chunk_files):
+                print(f"[TRANSCRIBE] Processing chunk {i+1}/{len(chunk_files)}...")
+                
+                with open(chunk_path, "rb") as audio_file:
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=(os.path.basename(chunk_path), audio_file.read()),
+                        model="whisper-large-v3",
+                        response_format="verbose_json",
+                        temperature=0.0
+                    )
+                
+                chunk_offset = i * 10 * 60
+                
+                if hasattr(transcription, 'segments'):
+                    for seg in transcription.segments:
+                        seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
+                        seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
+                        seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
+                        
+                        all_segments.append({
+                            "text": seg_text,
+                            "start": seg_start + chunk_offset,
+                            "end": seg_end + chunk_offset
+                        })
+                        full_text_builder.append(seg_text)
+                    full_text_builder.append(" ")
+        else:
+            print(f"[TRANSCRIBE] Sending to Groq API (whisper-large-v3)...")
+            
+            with open(audio_filepath, "rb") as audio_file:
+                transcription = groq_client.audio.transcriptions.create(
+                    file=(os.path.basename(audio_filepath), audio_file.read()),
+                    model="whisper-large-v3",
+                    response_format="verbose_json",
+                    temperature=0.0
+                )
+            
+            if hasattr(transcription, 'segments'):
+                print(f"[TRANSCRIBE] Received {len(transcription.segments)} segments.")
+                for seg in transcription.segments:
+                    seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
+                    seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
+                    seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
+                    
+                    all_segments.append({
+                        "text": seg_text,
+                        "start": seg_start,
+                        "end": seg_end
+                    })
+                    full_text_builder.append(seg_text)
+        
+        # Clean up chunks
+        for chunk_file in chunk_files:
+            try:
+                os.remove(chunk_file)
+            except:
+                pass
+        
+        full_text = "".join(full_text_builder)
+        
+        # Step 2: Analysis (Still using OpenAI GPT-4o-mini for intelligence)
+        # We can reuse the same logic
+        print(f"[ANALYZE] Identifying Surah with GPT-4o-mini (using Groq transcription)...")
+        analysis_text = full_text[:4000]
+        
+        system_prompt = "You are a Quran expert. Extract the Surah information from the provided Arabic text."
+        user_prompt = f"""
+        Analyze the following Quranic recitation text and provide:
+        1. Surah Number (1-114)
+        2. Surah Name (English/Transliterated, e.g. Al-Fatiha)
+        3. A brief summary of the content (in English)
+
+        Text to analyze: 
+        {analysis_text}
+
+        Respond in strictly valid JSON format: {{ "surah_number": INT, "surah_name": STR, "summary": STR }}
+        """
+
+        # Ensure OpenAI client is available for analysis even if using Groq for transcription
+        if not client:
+             raise Exception("OpenAI client required for Surah analysis (GPT-4o)")
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        analysis_content = completion.choices[0].message.content
+        analysis_data = json.loads(analysis_content)
+        
+        surah_number = analysis_data.get("surah_number")
+        surah_name = analysis_data.get("surah_name")
+        summary = analysis_data.get("summary")
+
+        # Reuse TranscriptionResult class from previous scope or define locally if needed
+        # It was defined inside transcribe_with_openai, so we need to redefine it or move it out.
+        # Let's verify where it was defined. It was inside transcribe_with_openai line 452.
+        # Better to move it out to global scope or return simple dict/object.
+        # For minimal refactor, I will return a SimpleNamespace or object.
+        
+        class TranscriptionResult:
+            def __init__(self, segments, surah_name, surah_number, summary, text):
+                self.segments = segments
+                self.text = text
+                self.surah_name = surah_name
+                self.surah_number = surah_number
+                self.summary = summary
+        
+        return TranscriptionResult(all_segments, surah_name, surah_number, summary, full_text)
+
+    except Exception as e:
+        for chunk_file in chunk_files:
+            try:
+                os.remove(chunk_file)
+            except:
+                pass
+        print(f"[ERROR] Groq processing failed: {e}")
+        raise
+
+async def transcribe_audio(audio_filepath):
+    """Wrapper to select provider based on config."""
+    print(f"[TRANSCRIBE] Using provider: {TRANSCRIPTION_PROVIDER}")
+    
+    loop = asyncio.get_event_loop()
+    
+    if TRANSCRIPTION_PROVIDER == "GROQ":
+        return await loop.run_in_executor(None, transcribe_with_groq, audio_filepath)
+    else:
+        return await loop.run_in_executor(None, transcribe_with_openai, audio_filepath)
+
 def repair_cache():
     """Scans cache files and attempts to identify Surahs and fetch titles for files missing metadata."""
     print("[REPAIR] Scanning cache for missing metadata...")
@@ -614,9 +781,10 @@ async def process_video(request: VideoRequest):
             
         # 3. Transcribe if not cached
         if not transcription_data:
-            print("Step 2: Transcribing with OpenAI (Whisper + GPT-4o)...")
-            loop = asyncio.get_event_loop()
-            transcription = await loop.run_in_executor(None, transcribe_with_openai, audio_filepath)
+            print(f"Step 2: Transcribing with {TRANSCRIPTION_PROVIDER} (Whisper + GPT-4o)...")
+            # Loop is already handled inside transcribe_audio for sync wrapper, 
+            # but transcribe_audio is async, so we await it directly.
+            transcription = await transcribe_audio(audio_filepath)
 
             # Extract segments directly from our result object
             segments = transcription.segments
