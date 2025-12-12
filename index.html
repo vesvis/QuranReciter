@@ -12,177 +12,297 @@
         rel="stylesheet">
 
     <style>
-        body {
-            background-color: #f3f4f6;
+        /* Custom Scrollbar for Webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-down {
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .animate-check-bounce {
+            animation: checkBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes checkBounce {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .quran-page {
+            /* Creamy paper background */
             background-color: #fdfbf7;
-            border: 1px solid #e5e7eb;
-            padding: 2rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             direction: rtl;
             text-align: justify;
+            /* Subtle texture overlay */
+            background-image: linear-gradient(to bottom, #ffffff, #fdfbf7 10%, #fdfbf7);
         }
 
         .quran-text {
             font-family: var(--quran-font, 'Amiri', serif);
-            font-size: var(--quran-font-size, 2.2rem);
-            line-height: 2.8;
+            /* Responsive Font Size using Clamp */
+            font-size: var(--quran-font-size, clamp(1.8rem, 5vw, 2.4rem));
+            line-height: 2.5;
             color: #1f2937;
         }
 
         .basmala {
             font-family: var(--quran-font, 'Amiri', serif);
-            font-size: var(--quran-font-size, 2.2rem);
+            font-size: var(--quran-font-size, clamp(1.8rem, 5vw, 2.4rem));
             text-align: center;
             margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #e5e7eb;
-            color: #16a34a;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            color: #059669;
+            /* Emerald 600 */
             font-weight: 700;
             direction: rtl;
+            position: relative;
+        }
+
+        .basmala::after {
+            content: "۞";
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 1.5rem;
+            color: #d1d5db;
         }
 
         .ayah-span {
-            padding: 0.2rem 0;
-            border-radius: 0.2rem;
-            transition: background-color 0.3s ease;
+            padding: 0.25rem 0.1rem;
+            border-radius: 0.3rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            position: relative;
+        }
+
+        .ayah-span:hover {
+            background-color: rgba(16, 185, 129, 0.1);
+            /* Emerald 500 at 10% */
         }
 
         .active-ayah {
-            background-color: #dcfce7;
-            box-shadow: 0 0 0 4px #dcfce7;
+            background-color: rgba(16, 185, 129, 0.25);
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
         }
 
         .ayah-marker {
             font-family: 'Amiri', serif;
-            color: #16a34a;
-            font-size: 1.8rem;
-            margin: 0 0.3rem;
+            color: #059669;
+            font-size: 0.9em;
+            margin: 0 0.4rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             position: relative;
             vertical-align: middle;
+            user-select: none;
         }
 
         .ayah-number {
-            font-size: 0.45em;
+            font-size: 0.4em;
             position: absolute;
-            top: 50%;
+            top: 55%;
             left: 50%;
-            transform: translate(-50%, -40%);
-            font-weight: bold;
-            color: #000;
-        }
-
-        /* Floating Scroll Button */
-        #scrollToCurrentBtn {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background-color: #16a34a;
-            color: white;
-            width: 3.5rem;
-            height: 3.5rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
-            z-index: 50;
-            opacity: 0;
-            pointer-events: none;
+            transform: translate(-50%, -50%);
+            font-weight: 900;
+            color: #064e3b;
+            /* Emerald 900 */
+            font-family: sans-serif;
         }
 
         #scrollToCurrentBtn.visible {
             opacity: 1;
+            transform: translateY(0);
             pointer-events: auto;
         }
 
-        #scrollToCurrentBtn:hover {
-            transform: scale(1.1);
-            background-color: #15803d;
+        /* Custom scrollbar for settings */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
         }
     </style>
 </head>
 
-<body class="h-screen flex flex-col items-center p-6 overflow-y-auto">
-    <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-gray-800 mb-2">Quran Reciter</h1>
-        <p class="text-gray-600">Sync YouTube recitations with Quran text</p>
+<body
+    class="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] min-h-screen text-gray-800 font-sans selection:bg-emerald-500 selection:text-white pb-20">
+
+    <!-- Background Pattern DO NOT REMOVE -->
+    <div class="fixed inset-0 z-0 opacity-20 pointer-events-none"
+        style="background-image: url('https://www.transparenttextures.com/patterns/arabesque.png');">
     </div>
 
-    <div class="w-full max-w-2xl bg-white rounded-xl shadow-md p-6 mb-8">
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Recent Recitations</label>
-            <select id="historySelect" onchange="loadFromHistory()"
-                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
-                <option value="">Select a previous recitation...</option>
-            </select>
+    <!-- Main Content -->
+    <div class="relative z-10 w-full max-w-5xl mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
+
+        <!-- Header -->
+        <div class="text-center mb-10 animate-fade-in-down">
+            <h1
+                class="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-4 drop-shadow-sm">
+                Quran Reciter
+            </h1>
+            <p class="text-slate-400 text-lg md:text-xl font-light tracking-wide">
+                Sync YouTube recitations with the Holy Quran
+            </p>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 mb-4">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">YouTube URL</label>
-                <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..."
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
+        <!-- Controls Card -->
+        <div
+            class="w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-6 md:p-8 mb-10 transition-all hover:bg-white/15">
+
+            <!-- History Dropdown -->
+            <div class="mb-6">
+                <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Recent
+                    Recitations</label>
+                <div class="relative">
+                    <select id="historySelect" onchange="loadFromHistory()"
+                        class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
+                        <option value="">Select a previous recitation...</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex items-end">
-                <button onclick="openSettings()"
-                    class="p-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition h-[50px] aspect-square flex items-center justify-center mr-2"
-                    title="Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                </button>
-                <button onclick="startProcess()" id="processBtn"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition h-[50px]">
-                    Process
-                </button>
+            <!-- Input & Actions -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">YouTube
+                        URL</label>
+                    <input type="text" id="urlInput" placeholder="Paste YouTube link here..."
+                        class="w-full bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500 p-4 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all shadow-inner">
+                </div>
+
+                <div class="flex gap-3 items-end">
+                    <button onclick="openSettings()"
+                        class="group p-4 bg-slate-700/50 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-600 transition-all active:scale-95 flex items-center justify-center h-[58px] w-[58px]"
+                        title="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                    <button onclick="startProcess()" id="processBtn"
+                        class="flex-1 md:flex-none bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-emerald-900/20 transform transition-all active:scale-95 h-[58px] min-w-[120px] flex items-center justify-center">
+                        Process
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="resultsArea" class="w-full max-w-4xl hidden">
-        <div class="bg-white p-4 rounded-xl shadow-md mb-6 flex justify-center sticky top-4 z-10">
-            <audio id="audioPlayer" controls class="w-full max-w-md"></audio>
-        </div>
+        <!-- Results Area -->
+        <div id="resultsArea" class="w-full hidden animate-fade-in-up">
 
-        <div class="text-center mb-6">
-            <h2 id="surahTitle" class="text-3xl font-bold text-gray-800"></h2>
-            <p id="surahDetails" class="text-gray-600"></p>
-        </div>
+            <!-- Sticky Player -->
+            <div class="sticky top-4 z-40 mb-8 px-2">
+                <div
+                    class="bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700/50 flex justify-center">
+                    <audio id="audioPlayer" controls class="w-full h-10 outline-none"></audio>
+                </div>
+            </div>
 
-        <div class="quran-page">
-            <div id="quranContainer" class="quran-text"></div>
+            <!-- Title Info -->
+            <div class="text-center mb-8">
+                <h2 id="surahTitle" class="text-4xl md:text-5xl font-amiri text-emerald-100 mb-2 drop-shadow-md"></h2>
+                <p id="surahDetails" class="text-slate-400 text-lg"></p>
+            </div>
+
+            <!-- Quran Text Display -->
+            <div class="quran-page bg-[#fdfbf7] text-slate-800 shadow-2xl relative overflow-hidden">
+                <!-- Decorative Frame -->
+                <div
+                    class="absolute inset-0 border-[12px] border-double border-[#e5e7eb]/50 pointer-events-none rounded-xl">
+                </div>
+                <div id="quranContainer" class="quran-text relative z-10 p-2 md:p-4"></div>
+            </div>
         </div>
     </div>
 
     <!-- Floating Scroll Button -->
-    <button id="scrollToCurrentBtn" onclick="scrollToCurrent()" title="Go to current Ayah">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    <button id="scrollToCurrentBtn" onclick="scrollToCurrent()"
+        class="fixed bottom-6 right-6 bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-full shadow-lg shadow-emerald-900/30 transform transition-all hover:scale-110 opacity-0 pointer-events-none z-50 flex items-center justify-center"
+        title="Go to current Ayah">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
     </button>
 
     <!-- Settings Modal -->
     <div id="settingsModal"
-        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-gray-800">Settings</h3>
-                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-700">
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto animate-check-bounce">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-2xl font-bold text-gray-800">Settings</h3>
+                <button onclick="closeSettings()"
+                    class="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -191,47 +311,64 @@
                 </button>
             </div>
 
-            <div class="p-6 space-y-6">
+            <div class="p-6 space-y-8">
                 <!-- Font Settings -->
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Appearance</h4>
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Reading Experience</h4>
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Font Style</label>
-                        <select id="fontSelect" onchange="changeFont()"
-                            class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white">
-                            <option value="'Amiri', serif">Amiri (Classic)</option>
-                            <option value="'Scheherazade New', serif">Scheherazade (Traditional)</option>
-                            <option value="'Noto Naskh Arabic', serif">Noto Naskh (Modern)</option>
-                            <option value="'Lateef', serif">Lateef (Cursive)</option>
-                            <option value="'Cairo', sans-serif">Cairo (Bold/Modern)</option>
-                            <option value="'Rakkas', serif">Rakkas (Display)</option>
-                        </select>
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                        <div class="relative">
+                            <select id="fontSelect" onchange="changeFont()"
+                                class="w-full appearance-none p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700 text-lg">
+                                <option value="'Amiri', serif">Amiri (Classic)</option>
+                                <option value="'Scheherazade New', serif">Scheherazade (Traditional)</option>
+                                <option value="'Noto Naskh Arabic', serif">Noto Naskh (Modern)</option>
+                                <option value="'Lateef', serif">Lateef (Cursive)</option>
+                                <option value="'Cairo', sans-serif">Cairo (Bold)</option>
+                                <option value="'Rakkas', serif">Rakkas (Display)</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
-                        <div class="flex justify-between items-center mb-1">
+                        <div class="flex justify-between items-center mb-2">
                             <label class="block text-sm font-medium text-gray-700">Font Size</label>
-                            <span id="fontSizeValue" class="text-sm text-gray-500">2.2rem</span>
+                            <span id="fontSizeValue"
+                                class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">2.2rem</span>
                         </div>
-                        <input type="range" id="fontSizeSlider" min="1.0" max="4.0" step="0.1" value="2.2"
+                        <input type="range" id="fontSizeSlider" min="1.0" max="5.0" step="0.1" value="2.2"
                             oninput="changeFontSize()"
-                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Small</span>
+                            <span>Large</span>
+                        </div>
                     </div>
                 </div>
 
+                <hr class="border-gray-100">
+
                 <!-- Download Management -->
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Manage Downloads</h4>
-                    <div id="downloadsList" class="space-y-2 max-h-48 overflow-y-auto">
-                        <p class="text-gray-500 text-sm text-center py-4">Loading downloads...</p>
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Saved Recitations</h4>
+                    <div id="downloadsList" class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        <p class="text-gray-400 text-sm text-center py-6 italic">Loading downloads...</p>
                     </div>
                 </div>
             </div>
 
-            <div class="p-4 bg-gray-50 rounded-b-xl flex justify-end">
+            <div class="p-6 bg-gray-50 rounded-b-2xl border-t border-gray-100 flex justify-end">
                 <button onclick="closeSettings()"
-                    class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-4 rounded-lg transition">
+                    class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-slate-300">
                     Done
                 </button>
             </div>
