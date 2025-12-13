@@ -12,6 +12,14 @@
         rel="stylesheet">
 
     <style>
+        html,
+        body {
+            overflow-x: hidden;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         /* Custom Scrollbar for Webkit */
         ::-webkit-scrollbar {
             width: 8px;
@@ -186,7 +194,7 @@
 </head>
 
 <body
-    class="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] min-h-screen text-gray-800 font-sans selection:bg-emerald-500 selection:text-white pb-20">
+    class="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] min-h-screen text-gray-800 font-sans selection:bg-emerald-500 selection:text-white pb-20 overflow-x-hidden">
 
     <!-- Background Pattern DO NOT REMOVE -->
     <div class="fixed inset-0 z-0 opacity-20 pointer-events-none"
@@ -209,7 +217,7 @@
 
         <!-- Controls Card -->
         <div
-            class="w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-6 md:p-8 mb-10 transition-all hover:bg-white/15">
+            class="w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-5 md:p-8 mb-10 transition-all hover:bg-white/15">
 
             <!-- History Dropdown -->
             <div class="mb-6">
