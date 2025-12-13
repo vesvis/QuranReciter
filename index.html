@@ -1215,9 +1215,15 @@
 
         // Listen for new service worker taking over
         let refreshing = false;
+        // Track if we were controlled at load time (to differentiate first install vs update)
+        const isControlled = Boolean(navigator.serviceWorker.controller);
+
         navigator.serviceWorker.addEventListener('controllerchange', () => {
             if (refreshing) return;
-            showUpdateToast();
+            // Only show toast if we were already controlled (i.e., this is an update, not a fresh install)
+            if (isControlled) {
+                showUpdateToast();
+            }
         });
 
         window.onload = () => {
