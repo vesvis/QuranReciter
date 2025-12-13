@@ -303,6 +303,35 @@
         </svg>
     </button>
 
+    <!-- Update Toast -->
+    <div id="updateToast"
+        class="fixed bottom-6 left-6 z-50 transform translate-y-20 opacity-0 transition-all duration-500 ease-out hidden">
+        <div
+            class="bg-slate-800/95 backdrop-blur-md border border-slate-700 text-white rounded-xl shadow-2xl p-4 flex items-center gap-4 max-w-sm">
+            <div class="bg-emerald-500/20 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+            <div>
+                <h4 class="font-bold text-sm text-emerald-100">Update Available</h4>
+                <p class="text-xs text-slate-400">A new version is ready.</p>
+            </div>
+            <button onclick="window.location.reload()"
+                class="ml-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-4 rounded-lg transition-colors">
+                Refresh
+            </button>
+            <button onclick="dismissToast()" class="text-slate-500 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settingsModal"
         class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
@@ -1169,6 +1198,30 @@
             }
         }
 
+        // --- Update Notification Logic ---
+        function showUpdateToast() {
+            const toast = document.getElementById('updateToast');
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-20', 'opacity-0');
+            }, 10);
+        }
+
+        function dismissToast() {
+            const toast = document.getElementById('updateToast');
+            toast.classList.add('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 500);
+        }
+
+        // Listen for new service worker taking over
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            showUpdateToast();
+        });
+
         window.onload = () => {
             // Init settings
             const savedFont = localStorage.getItem('quranFont');
@@ -1194,7 +1247,16 @@
 
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('Service Worker Registered', reg))
+                    .then(reg => {
+                        console.log('Service Worker Registered', reg);
+
+                        // Check for waiting worker on load
+                        if (reg.waiting) {
+                            // If there's a worker waiting, we could show the toast immediately
+                            // checking if it's different from active
+                            showUpdateToast();
+                        }
+                    })
                     .catch(err => console.log('Service Worker Failed', err));
             }
         };
