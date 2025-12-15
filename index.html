@@ -421,6 +421,34 @@
         let currentTimeline = [];
         let audioPlayer = document.getElementById('audioPlayer');
 
+        // --- Auto-Scroll Logic ---
+        let isUserInteracting = false;
+        let inactivityTimer = null;
+        const INACTIVITY_DELAY = 4000; // 4 seconds
+
+        function resetInactivity() {
+            isUserInteracting = true;
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                isUserInteracting = false;
+                // Optional: Trigger an immediate catch-up scroll when timer expires
+                scrollToActiveAyah();
+            }, INACTIVITY_DELAY);
+        }
+
+        // Listen for user interaction to pause auto-scroll
+        ['mousemove', 'mousedown', 'touchstart', 'scroll', 'keydown', 'click'].forEach(evt =>
+            window.addEventListener(evt, resetInactivity, { passive: true })
+        );
+
+        // Helper to scroll to the active element
+        function scrollToActiveAyah() {
+            const activeEl = document.querySelector('.active-ayah');
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
         // --- Sticky Player Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             const sentinel = document.getElementById('sticky-sentinel');
@@ -443,6 +471,9 @@
             }, { threshold: 0 });
 
             if (sentinel) observer.observe(sentinel);
+
+            // Start inactivity timer on load
+            resetInactivity();
         });
 
         // --- IndexedDB Configuration ---
@@ -1120,6 +1151,11 @@
                     el.classList.add('active-ayah');
                     // Show button if we have an active ayah
                     btn.classList.add('visible');
+
+                    // --- Auto-Scroll Trigger ---
+                    if (!isUserInteracting) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 } else {
                     console.warn(`[PLAYBACK] Active segment found for Ayah ${activeSegment.ayah}, but DOM element #ayah-${activeSegment.ayah} not found!`);
                 }
