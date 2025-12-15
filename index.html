@@ -158,7 +158,6 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            position: relative;
             vertical-align: middle;
             user-select: none;
         }
@@ -269,13 +268,19 @@
         <!-- Results Area -->
         <div id="resultsArea" class="w-full hidden animate-fade-in-up">
 
-            <!-- Sticky Player -->
-            <div class="sticky top-4 z-40 mb-8 px-2">
-                <div
-                    class="bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700/50 flex justify-center">
-                    <audio id="audioPlayer" controls class="w-full h-10 outline-none"></audio>
+            <!-- Fixed Player Wrapper -->
+            <div
+                class="fixed top-0 left-0 right-0 z-40 flex justify-center px-2 pt-2 pointer-events-none transition-transform duration-300">
+                <div class="w-full max-w-5xl pointer-events-auto">
+                    <div
+                        class="bg-slate-800/90 backdrop-blur-md p-3 rounded-xl shadow-2xl border border-slate-700/50 flex justify-center">
+                        <audio id="audioPlayer" controls class="w-full h-10 outline-none"></audio>
+                    </div>
                 </div>
             </div>
+
+            <!-- Spacer to prevent content jump -->
+            <div class="h-24 mb-4"></div>
 
             <!-- Title Info -->
             <div class="text-center mb-8">
