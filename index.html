@@ -268,19 +268,21 @@
         <!-- Results Area -->
         <div id="resultsArea" class="w-full hidden animate-fade-in-up">
 
-            <!-- Fixed Player Wrapper -->
-            <div
-                class="fixed top-0 left-0 right-0 z-40 flex justify-center px-2 pt-2 pointer-events-none transition-transform duration-300">
-                <div class="w-full max-w-5xl pointer-events-auto">
+            <!-- Sentinel for scroll detection -->
+            <div id="sticky-sentinel" class="w-full h-px opacity-0 absolute -mt-4"></div>
+
+            <!-- Placeholder (occupies space when player is fixed) -->
+            <div id="sticky-placeholder" class="hidden h-24 mb-8 w-full"></div>
+
+            <!-- Player Container -->
+            <div id="sticky-player" class="z-40 w-full mb-8 px-2 transition-transform duration-300 origin-top">
+                <div class="max-w-5xl mx-auto">
                     <div
-                        class="bg-slate-800/90 backdrop-blur-md p-3 rounded-xl shadow-2xl border border-slate-700/50 flex justify-center">
+                        class="bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700/50 flex justify-center">
                         <audio id="audioPlayer" controls class="w-full h-10 outline-none"></audio>
                     </div>
                 </div>
             </div>
-
-            <!-- Spacer to prevent content jump -->
-            <div class="h-24 mb-4"></div>
 
             <!-- Title Info -->
             <div class="text-center mb-8">
@@ -418,6 +420,30 @@
     <script>
         let currentTimeline = [];
         let audioPlayer = document.getElementById('audioPlayer');
+
+        // --- Sticky Player Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const sentinel = document.getElementById('sticky-sentinel');
+            const player = document.getElementById('sticky-player');
+            const placeholder = document.getElementById('sticky-placeholder');
+
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].boundingClientRect.top < 0 && !entries[0].isIntersecting) {
+                    // Scrolled past -> Make Sticky
+                    player.classList.add('fixed', 'top-0', 'left-0', 'right-0', 'pt-2');
+                    player.classList.remove('mb-8', 'px-2'); // Remove margins/padding that fight with fixed
+                    // Add padding to inner wrapper if needed, or rely on the container constraints
+                    placeholder.classList.remove('hidden');
+                } else {
+                    // Back in view -> Make Static
+                    player.classList.remove('fixed', 'top-0', 'left-0', 'right-0', 'pt-2');
+                    player.classList.add('mb-8', 'px-2');
+                    placeholder.classList.add('hidden');
+                }
+            }, { threshold: 0 });
+
+            if (sentinel) observer.observe(sentinel);
+        });
 
         // --- IndexedDB Configuration ---
         const DB_NAME = 'QuranReciterDB';
