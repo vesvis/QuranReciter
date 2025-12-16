@@ -284,48 +284,37 @@ def fetch_surah_text(surah_number):
         return []
 
 def download_audio(youtube_url):
-    """Downloads audio from YouTube using yt-dlp with robust fallbacks."""
+    """Downloads audio from YouTube using robust configuration (bestaudio/best)."""
     
-    # 1. Broaden the format request. 
-    # Instead of demanding '140', we ask for 'm4a' OR 'mp4' OR 'any audio'.
-    # We also relax the protocol to allow 'm3u8_native' which often works when direct streams fail.
+    # Reverting to the historically working configuration:
+    # 'format': 'bestaudio/best' - fetches best available audio (likely m4a or webm/opus)
+    # No postprocessors - to reduce compute (no mp3 conversion)
     base_opts = {
-        'format': 'bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio',
+        'format': 'bestaudio/best',
         'outtmpl': 'cache/%(id)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
         'concurrent_fragment_downloads': 10,
-        # This helps with 403/Format errors by avoiding complex DASH manifests if possible
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     }
 
     try:
-        print("[YT-DLP] Attempting download with browser impersonation...")
-        # Use get_ydl_opts to inject cookies and handle impersonation
-        opts_with_impersonate = get_ydl_opts(base_opts.copy(), use_impersonate=True)
+        print("[YT-DLP] Attempting download (Robust Mode)...")
+        # Always use get_ydl_opts to ensure cookies are passed
+        ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=True)
         
-        with yt_dlp.YoutubeDL(opts_with_impersonate) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
+            # Use specific extension from info, default to m4a if missing
             ext = info.get('ext', 'm4a')
             return f"{info['id']}.{ext}", info['title']
             
     except Exception as e:
-        print(f"[WARN] Primary download failed: {e}")
-        print("[YT-DLP] Retrying with fallback options (No impersonation, restricted client)...")
+        print(f"[WARN] Download failed: {e}. Retrying without impersonation...")
         
-        # Fallback: Use get_ydl_opts but disable impersonation
-        fallback_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
-        
-        # Remove restrictive player_client args if they exist in base_opts
-        if 'extractor_args' in fallback_opts:
-            fallback_opts['extractor_args']['youtube'] = {'player_client': ['web', 'ios']}
-            
-        # Simplify format check for fallback to ensure we get SOMETHING
-        fallback_opts['format'] = 'bestaudio/best'
-        
-        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+        # Fallback
+        ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            # We might get webm or m4a, let's just use what we get
             ext = info.get('ext', 'm4a')
             return f"{info['id']}.{ext}", info['title']
 
@@ -876,7 +865,8 @@ async def process_video(request: VideoRequest):
                 "summary": summary,
                 "segments": segments,
                 "text": full_text,
-                "title": title
+                "title": title,
+                "audio_filename": audio_filename  # Save actual filename (ext) for frontend
             }
             
             # Save to cache

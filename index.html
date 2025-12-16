@@ -902,7 +902,12 @@
                     console.log("[CACHE] Loaded from browser cache/server!");
                     const data = await response.json();
                     data.id = videoId;
-                    data.audio_url = `/cache/${videoId}.m4a`;
+                    // Use filename from JSON if available, else fallback
+                    if (data.audio_filename) {
+                        data.audio_url = `/cache/${data.audio_filename}`;
+                    } else {
+                        data.audio_url = `/cache/${videoId}.m4a`;
+                    }
 
                     // If surah_text is missing, fetch it from the API
                     if (!data.surah_text || data.surah_text.length === 0) {
@@ -922,7 +927,7 @@
 
                     // SAVE TO INDEXEDDB FOR NEXT TIME
                     // Fetch the audio as blob and save everything
-                    fetch(`/cache/${videoId}.m4a`)
+                    fetch(data.audio_url)
                         .then(r => r.blob())
                         .then(blob => {
                             console.log("[CACHE] Upgrading to IndexedDB...");
@@ -945,7 +950,9 @@
 
                     // Attempt to save to cache
                     if (data.id) {
-                        fetch(`/cache/${data.id}.m4a`)
+                        // Use audio_url which should be set correctly by now
+                        let audioFetchUrl = data.audio_url || `/cache/${data.id}.m4a`;
+                        fetch(audioFetchUrl)
                             .then(r => r.blob())
                             .then(blob => LocalDB.saveRecitation(data, blob))
                             .then(loadHistory);
