@@ -279,8 +279,48 @@
             <div id="sticky-player" class="z-40 w-full mb-8 px-2 transition-transform duration-300 origin-top">
                 <div class="max-w-5xl mx-auto">
                     <div
-                        class="bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700/50 flex justify-center">
-                        <audio id="audioPlayer" controls class="w-full h-10 outline-none"></audio>
+                        class="bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700/50 flex flex-col justify-center">
+                        <audio id="audioPlayer" controls class="w-full h-10 outline-none mb-2"></audio>
+
+                        <!-- Repeat Controls -->
+                        <div id="repeat-controls"
+                            class="flex flex-wrap items-center justify-between text-slate-300 text-xs md:text-sm gap-2">
+                            <!-- Left: Mode Switcher -->
+                            <div class="flex items-center gap-2">
+                                <button id="btn-repeat-mode" onclick="toggleRepeatMode()"
+                                    class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 min-w-[100px] justify-center border border-slate-600">
+                                    <span id="repeat-icon">➡️</span> <span id="repeat-label">No Repeat</span>
+                                </button>
+
+                                <!-- Range Inputs (Hidden by default) -->
+                                <div id="range-inputs" class="hidden flex items-center gap-1 animate-fade-in-down">
+                                    <input type="number" id="repeat-start" placeholder="Start"
+                                        class="w-12 bg-slate-700 border border-slate-600 rounded px-1 text-center focus:border-emerald-500 outline-none">
+                                    <span>-</span>
+                                    <input type="number" id="repeat-end" placeholder="End"
+                                        class="w-12 bg-slate-700 border border-slate-600 rounded px-1 text-center focus:border-emerald-500 outline-none">
+                                </div>
+                            </div>
+
+                            <!-- Right: Count Settings -->
+                            <div
+                                class="flex items-center gap-2 bg-slate-700/50 px-2 py-1 rounded-lg border border-slate-600">
+                                <span class="text-slate-400">Count:</span>
+                                <input type="number" id="repeat-count-input" value="1" min="1" disabled
+                                    class="w-10 bg-slate-800 border border-slate-600 rounded px-1 text-center text-slate-400 disabled:opacity-50 transition-all">
+
+                                <label class="flex items-center gap-1 cursor-pointer select-none">
+                                    <input type="checkbox" id="repeat-infinite" checked onchange="toggleRepeatCount()"
+                                        class="accent-emerald-500 w-4 h-4 rounded cursor-pointer">
+                                    <span class="font-bold text-lg leading-none">∞</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Status Text -->
+                        <div id="repeat-status"
+                            class="text-[10px] text-emerald-400 text-center -mb-1 mt-1 font-mono hidden"></div>
+
                     </div>
                 </div>
             </div>
@@ -426,6 +466,68 @@
         let isUserInteracting = false;
         let inactivityTimer = null;
         const INACTIVITY_DELAY = 4000; // 4 seconds
+
+        // --- Repeat Logic State ---
+        let repeatMode = 'off'; // off, surah, ayah, range
+        let repeatCount = Infinity;
+        let currentLoop = 0;
+        let repeatStartAyah = null;
+        let repeatEndAyah = null;
+
+        function toggleRepeatMode() {
+            const modes = ['off', 'surah', 'ayah', 'range'];
+            const nextIndex = (modes.indexOf(repeatMode) + 1) % modes.length;
+            repeatMode = modes[nextIndex];
+            updateRepeatUI();
+        }
+
+        function toggleRepeatCount() {
+            const isInfinite = document.getElementById('repeat-infinite').checked;
+            const input = document.getElementById('repeat-count-input');
+            input.disabled = isInfinite;
+            repeatCount = isInfinite ? Infinity : parseInt(input.value) || 1;
+
+            // Allow update of count even while playing
+            input.onchange = () => {
+                repeatCount = parseInt(input.value) || 1;
+            };
+        }
+
+        function updateRepeatUI() {
+            const btn = document.getElementById('btn-repeat-mode');
+            const label = document.getElementById('repeat-label');
+            const icon = document.getElementById('repeat-icon');
+            const rangeInputs = document.getElementById('range-inputs');
+            const statusDiv = document.getElementById('repeat-status');
+
+            rangeInputs.classList.add('hidden');
+            statusDiv.classList.add('hidden');
+            currentLoop = 0; // Reset loop on mode change
+
+            switch (repeatMode) {
+                case 'off':
+                    label.textContent = "No Repeat";
+                    icon.textContent = "➡️";
+                    btn.className = "bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 min-w-[100px] justify-center border border-slate-600";
+                    break;
+                case 'surah':
+                    label.textContent = "Loop Surah";
+                    icon.textContent = "🔁";
+                    btn.className = "bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 min-w-[100px] justify-center border border-emerald-500 text-white shadow-lg shadow-emerald-900/20";
+                    break;
+                case 'ayah':
+                    label.textContent = "Loop Ayah";
+                    icon.textContent = "🔂";
+                    btn.className = "bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 min-w-[100px] justify-center border border-emerald-500 text-white shadow-lg shadow-emerald-900/20";
+                    break;
+                case 'range':
+                    label.textContent = "Loop Range";
+                    icon.textContent = "↔️";
+                    rangeInputs.classList.remove('hidden');
+                    btn.className = "bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 min-w-[100px] justify-center border border-emerald-500 text-white shadow-lg shadow-emerald-900/20";
+                    break;
+            }
+        }
 
         function resetInactivity() {
             isUserInteracting = true;
@@ -1157,11 +1259,105 @@
                     if (!isUserInteracting) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
+
+                    // --- REPEAT LOGIC ---
+                    handleRepeatLogic(activeSegment, time);
+
                 } else {
                     console.warn(`[PLAYBACK] Active segment found for Ayah ${activeSegment.ayah}, but DOM element #ayah-${activeSegment.ayah} not found!`);
                 }
             }
         };
+
+        function handleRepeatLogic(segment, time) {
+            if (repeatMode === 'off') return;
+
+            const statusDiv = document.getElementById('repeat-status');
+            const countDisplay = repeatCount === Infinity ? "∞" : `${currentLoop + 1}/${repeatCount}`;
+
+            // 1. Surah Loop (Handled by 'ended' event mostly, but good to show status)
+            if (repeatMode === 'surah') {
+                // Logic is handled by audioPlayer.loop = true or onended
+                // But we can implement manual looper if needed.
+                // For now, let's keep it simple:
+                audioPlayer.loop = (repeatCount === Infinity);
+                // If finite count for surah, we'd need onended handler.
+                return;
+            }
+            audioPlayer.loop = false; // Disable native loop for other modes
+
+            // 2. Ayah Loop
+            if (repeatMode === 'ayah') {
+                statusDiv.textContent = `Repeating Ayah ${segment.ayah} (${countDisplay})`;
+                statusDiv.classList.remove('hidden');
+
+                // Check if near end of segment (within 0.3s)
+                if (time >= segment.end - 0.25) {
+                    if (currentLoop < repeatCount - 1 || repeatCount === Infinity) {
+                        audioPlayer.currentTime = segment.start;
+                        currentLoop++;
+                        // If infinite, just keep playing.
+                    } else {
+                        // Finished loops, move to next
+                        // We need to wait until it actually finishes this segment to reset?
+                        // Simple approach: reset loop count when we change segments naturally
+                        // But here we are forcing it.
+                        // To "break out", we just let it play past segment.end
+                        // And we must ensure we don't snap back again immediately.
+                        // Implemented by checking 'activeSegment' changed? 
+                        // Actually, simplified: Once we hit limit, we set mode to off? Or just stop looping THIS ayah?
+                        // User likely wants to loop NEXT ayah too?
+                        // Usually "Repeat Ayah" means "Loop current one X times, then proceed to next and loop IT X times".
+                        // Let's assume: Loop Current -> Proceed -> Loop Next -> Proceed.
+
+                        // RESET for next one is tricky inside continuous timeupdate.
+                        // Best approach: Track WHICH ayah we are looping.
+                    }
+                }
+
+                // Track Loop State Change
+                if (window.lastRepeatedAyah !== segment.ayah) {
+                    window.lastRepeatedAyah = segment.ayah;
+                    currentLoop = 0; // New Ayah started, reset loop count
+                }
+            }
+
+            // 3. Range Loop
+            if (repeatMode === 'range') {
+                const startAyah = parseInt(document.getElementById('repeat-start').value);
+                const endAyah = parseInt(document.getElementById('repeat-end').value);
+
+                if (!startAyah || !endAyah) {
+                    statusDiv.textContent = "Enter Range...";
+                    statusDiv.classList.remove('hidden');
+                    return;
+                }
+
+                statusDiv.textContent = `Looping ${startAyah}-${endAyah} (${countDisplay})`;
+                statusDiv.classList.remove('hidden');
+
+                // Find End Time of the Range
+                // We need the segment for the END ayah.
+                // Optim: Cache this lookup
+                const endSegment = currentTimeline.find(t => t.ayah === endAyah);
+                const startSegment = currentTimeline.find(t => t.ayah === startAyah);
+
+                if (endSegment && startSegment) {
+                    if (time >= endSegment.end - 0.25) {
+                        if (currentLoop < repeatCount - 1 || repeatCount === Infinity) {
+                            audioPlayer.currentTime = startSegment.start;
+                            currentLoop++;
+                        } else {
+                            // Finished range loops.
+                            // Stop or Continue?
+                            // Usually "Stop" or "Repeat Off"
+                            repeatMode = 'off';
+                            updateRepeatUI();
+                        }
+                    }
+                }
+            }
+        }
 
         function scrollToCurrent() {
             const activeEl = document.querySelector('.active-ayah');
