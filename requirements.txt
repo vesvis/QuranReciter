@@ -2,10 +2,11 @@ fastapi
 uvicorn
 groq
 python-dotenv
-yt-dlp>=2024.04.09
-curl-cffi
+curl-cffi>=0.5.10
+yt-dlp>=2024.12.06
 rapidfuzz
 requests
 static-ffmpeg
 google-genai
 openai
+brotli
