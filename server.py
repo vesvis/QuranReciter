@@ -287,7 +287,7 @@ def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
     # Define base options
     base_opts = {
-        'format': 'bestaudio[ext=m4a]/bestaudio',
+        'format': '140/bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio',
         'outtmpl': 'cache/%(id)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
@@ -299,14 +299,17 @@ def download_audio(youtube_url):
         ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=True)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            return f"{info['id']}.m4a", info['title']
+            # Check actual extension
+            ext = info.get('ext', 'm4a')
+            return f"{info['id']}.{ext}", info['title']
     except Exception as e:
         print(f"[WARN] Download with impersonation failed: {e}. Retrying without...")
         # Fallback without impersonation
         ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            return f"{info['id']}.m4a", info['title']
+            ext = info.get('ext', 'm4a')
+            return f"{info['id']}.{ext}", info['title']
 
 def get_video_id(youtube_url):
     """Gets YouTube video ID and title without downloading."""
@@ -793,7 +796,15 @@ async def process_video(request: VideoRequest):
         # 1. Get Video ID & Check Cache
         video_id, title = get_video_id(request.url)
         cache_file = f"cache/{video_id}.json"
+        
+        # Check for existing audio file (m4a preferred, but check others)
         audio_filename = f"{video_id}.m4a"
+        if not os.path.exists(f"cache/{audio_filename}"):
+             if os.path.exists(f"cache/{video_id}.webm"):
+                 audio_filename = f"{video_id}.webm"
+             elif os.path.exists(f"cache/{video_id}.mp3"):
+                 audio_filename = f"{video_id}.mp3"
+
         audio_filepath = f"cache/{audio_filename}"
         
         transcription_data = None
@@ -806,13 +817,18 @@ async def process_video(request: VideoRequest):
         else:
             # Not in cache - Proceed with Download & Transcribe
             
-            # 2. Download Audio (if not already there, but we need it for transcription)
+            # 2. Download Audio (if not already there)
             if not os.path.exists(audio_filepath):
                 print("Step 1: Downloading Audio...")
                 loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, download_audio, request.url)
-            
-            # 3. Transcribe
+                # download_audio now returns (filename, title)
+                downloaded_filename, _ = await loop.run_in_executor(None, download_audio, request.url)
+                
+                # Update our reference to the actual file
+                audio_filename = downloaded_filename
+                audio_filepath = f"cache/{audio_filename}"
+                
+            # 3. Transcribe if not cached
             print(f"Step 2: Transcribing with {TRANSCRIPTION_PROVIDER} (Whisper + GPT-4o)...")
             transcription = await transcribe_audio(audio_filepath)
 
