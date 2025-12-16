@@ -260,23 +260,38 @@ def identify_surah_via_api(segments, full_text):
 def fetch_surah_text(surah_number):
     """Downloads the specific Surah text from the API."""
     try:
-        url = f"http://api.alquran.cloud/v1/surah/{surah_number}/quran-uthmani"
+        # Use HTTPS
+        url = f"https://api.alquran.cloud/v1/surah/{surah_number}/quran-uthmani"
         print(f"[FETCH] Fetching text for Surah {surah_number}...")
         
-        response = requests.get(url, timeout=30)
+        # Add User-Agent to avoid blocking
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=30)
+        
+        print(f"[FETCH] Status Code: {response.status_code}")
+        
         if response.status_code == 200:
-            data = response.json()
-            
+            try:
+                data = response.json()
+            except json.JSONDecodeError as e:
+                print(f"[ERROR] JSON Decode Error. Response text preview: {response.text[:200]}")
+                raise e
+
             surah_data = []
-            for ayah in data["data"]["ayahs"]:
-                surah_data.append({
-                    "surah": surah_number,
-                    "ayah": ayah["numberInSurah"],
-                    "text": ayah["text"]
-                })
-            return surah_data
+            if "data" in data and "ayahs" in data["data"]:
+                for ayah in data["data"]["ayahs"]:
+                    surah_data.append({
+                        "surah": surah_number,
+                        "ayah": ayah["numberInSurah"],
+                        "text": ayah["text"]
+                    })
+                return surah_data
+            else:
+                 print(f"[ERROR] Unexpected JSON structure: {data.keys()}")
+                 return []
             
         print(f"[ERROR] Error fetching Surah text: Status {response.status_code}")
+        print(f"[ERROR] Response body: {response.text[:200]}")
         return []
         
     except Exception as e:
