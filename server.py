@@ -2,6 +2,7 @@ import os
 import asyncio
 import json
 import uvicorn
+import concurrent.futures
 from openai import OpenAI
 from groq import Groq
 import yt_dlp
@@ -19,6 +20,10 @@ import re
 import subprocess
 import math
 import http.cookies
+import mimetypes
+
+# Ensure .m4a is recognized as audio/mp4 (or audio/x-m4a)
+mimetypes.add_type('audio/mp4', '.m4a')
 
 
 # Load environment variables
@@ -154,6 +159,42 @@ def get_ydl_opts(base_opts=None, use_impersonate=True):
     
     return opts
 
+    return opts
+
+def process_single_chunk(index, chunk_path, client):
+    """Helper function to process a single audio chunk with Groq."""
+    try:
+        print(f"[TRANSCRIBE] Processing chunk {index+1} (parallel)...")
+        with open(chunk_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                file=(os.path.basename(chunk_path), audio_file.read()),
+                model="whisper-large-v3",
+                response_format="verbose_json",
+                temperature=0.0
+            )
+        
+        chunk_offset = index * 10 * 60 # 10 minutes offset per chunk
+        segments = []
+        text_builder = []
+        
+        if hasattr(transcription, 'segments'):
+            for seg in transcription.segments:
+                seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
+                seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
+                seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
+                
+                segments.append({
+                    "text": seg_text,
+                    "start": seg_start + chunk_offset,
+                    "end": seg_end + chunk_offset
+                })
+                text_builder.append(seg_text)
+        
+        return index, segments, " ".join(text_builder)
+    except Exception as e:
+        print(f"[ERROR] Chunk {index} failed: {e}")
+        return index, [], ""
+
 # --- 2. HELPER FUNCTIONS ---
 
 def normalize_arabic(text):
@@ -246,16 +287,11 @@ def download_audio(youtube_url):
     """Downloads audio from YouTube using yt-dlp."""
     # Define base options
     base_opts = {
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio',
         'outtmpl': 'cache/%(id)s.%(ext)s',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192'
-        }],
         'quiet': True,
         'no_warnings': True,
-        'concurrent_fragment_downloads': 5,
+        'concurrent_fragment_downloads': 10,
     }
 
     try:
@@ -263,14 +299,14 @@ def download_audio(youtube_url):
         ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=True)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            return f"{info['id']}.mp3", info['title']
+            return f"{info['id']}.m4a", info['title']
     except Exception as e:
         print(f"[WARN] Download with impersonation failed: {e}. Retrying without...")
         # Fallback without impersonation
         ydl_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            return f"{info['id']}.mp3", info['title']
+            return f"{info['id']}.m4a", info['title']
 
 def get_video_id(youtube_url):
     """Gets YouTube video ID and title without downloading."""
@@ -310,11 +346,12 @@ def get_audio_duration(audio_filepath):
 
 def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
     """
-    Split audio file into chunks using ffmpeg to stay under Groq's 25MB limit.
+    Split audio file into chunks using ffmpeg stream copy to stay under Groq's 25MB limit.
     Returns list of chunk file paths.
     """
     print(f"[SPLIT] Splitting audio into chunks...")
     
+    file_ext = os.path.splitext(audio_filepath)[1]
     duration = get_audio_duration(audio_filepath)
     chunk_duration_sec = chunk_duration_minutes * 60
     num_chunks = math.ceil(duration / chunk_duration_sec)
@@ -323,12 +360,12 @@ def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
     
     for i in range(num_chunks):
         start_time = i * chunk_duration_sec
-        chunk_path = audio_filepath.replace('.mp3', f'_chunk_{i}.mp3')
+        chunk_path = audio_filepath.replace(file_ext, f'_chunk_{i}{file_ext}')
         
-        # Use ffmpeg to extract chunk with lower bitrate
+        # Use ffmpeg -c copy for instant splitting
         subprocess.run(
-            ['ffmpeg', '-i', audio_filepath, '-ss', str(start_time), 
-             '-t', str(chunk_duration_sec), '-b:a', '64k', '-y', chunk_path],
+            ['ffmpeg', '-ss', str(start_time), '-t', str(chunk_duration_sec), 
+             '-i', audio_filepath, '-c', 'copy', '-map', '0', '-y', chunk_path],
             capture_output=True,
             check=True
         )
@@ -502,32 +539,26 @@ def transcribe_with_groq(audio_filepath):
             print(f"[TRANSCRIBE] File too large, splitting into chunks...")
             chunk_files = split_audio_chunks(audio_filepath, chunk_duration_minutes=10)
             
-            for i, chunk_path in enumerate(chunk_files):
-                print(f"[TRANSCRIBE] Processing chunk {i+1}/{len(chunk_files)}...")
+            # Parallel Processing
+            print(f"[TRANSCRIBE] Starting parallel processing with 5 workers...")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = {
+                    executor.submit(process_single_chunk, i, chunk_path, groq_client): i 
+                    for i, chunk_path in enumerate(chunk_files)
+                }
                 
-                with open(chunk_path, "rb") as audio_file:
-                    transcription = groq_client.audio.transcriptions.create(
-                        file=(os.path.basename(chunk_path), audio_file.read()),
-                        model="whisper-large-v3",
-                        response_format="verbose_json",
-                        temperature=0.0
-                    )
-                
-                chunk_offset = i * 10 * 60
-                
-                if hasattr(transcription, 'segments'):
-                    for seg in transcription.segments:
-                        seg_text = seg.get('text', '') if isinstance(seg, dict) else seg.text
-                        seg_start = seg.get('start', 0) if isinstance(seg, dict) else seg.start
-                        seg_end = seg.get('end', 0) if isinstance(seg, dict) else seg.end
-                        
-                        all_segments.append({
-                            "text": seg_text,
-                            "start": seg_start + chunk_offset,
-                            "end": seg_end + chunk_offset
-                        })
-                        full_text_builder.append(seg_text)
-                    full_text_builder.append(" ")
+                results = []
+                for future in concurrent.futures.as_completed(futures):
+                    results.append(future.result())
+            
+            # Sort by index to maintain order
+            results.sort(key=lambda x: x[0])
+            
+            for index, segments, text in results:
+                all_segments.extend(segments)
+                full_text_builder.append(text)
+                full_text_builder.append(" ")
+
         else:
             print(f"[TRANSCRIBE] Sending to Groq API (whisper-large-v3)...")
             
@@ -711,7 +742,7 @@ async def get_recitation(video_id: str):
     
     # Add the video_id and ensure audio_url is relative
     data["id"] = video_id
-    audio_filename = f"{video_id}.mp3"
+    audio_filename = f"{video_id}.m4a"
     data["audio_url"] = f"/cache/{audio_filename}"
     
     # Fetch the full Quran text if not already in cache
@@ -762,28 +793,27 @@ async def process_video(request: VideoRequest):
         # 1. Get Video ID & Check Cache
         video_id, title = get_video_id(request.url)
         cache_file = f"cache/{video_id}.json"
-        audio_filename = f"{video_id}.mp3"
+        audio_filename = f"{video_id}.m4a"
         audio_filepath = f"cache/{audio_filename}"
         
         transcription_data = None
         
         if os.path.exists(cache_file):
-            print("[CACHE] Found cached transcription.")
+            print("[CACHE] Found cached transcription. Creating response...")
             with open(cache_file, "r", encoding="utf-8") as f:
                 transcription_data = json.load(f)
         
-        # 2. Download Audio if missing
-        if not os.path.exists(audio_filepath):
-            print("Step 1: Downloading Audio...")
-            # Run blocking download in thread pool
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, download_audio, request.url)
+        else:
+            # Not in cache - Proceed with Download & Transcribe
             
-        # 3. Transcribe if not cached
-        if not transcription_data:
+            # 2. Download Audio (if not already there, but we need it for transcription)
+            if not os.path.exists(audio_filepath):
+                print("Step 1: Downloading Audio...")
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, download_audio, request.url)
+            
+            # 3. Transcribe
             print(f"Step 2: Transcribing with {TRANSCRIPTION_PROVIDER} (Whisper + GPT-4o)...")
-            # Loop is already handled inside transcribe_audio for sync wrapper, 
-            # but transcribe_audio is async, so we await it directly.
             transcription = await transcribe_audio(audio_filepath)
 
             # Extract segments directly from our result object
@@ -818,18 +848,20 @@ async def process_video(request: VideoRequest):
             # Save to cache
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(transcription_data, f, ensure_ascii=False)
-        else:
-            print("[SKIP] Skipping transcription (Cached)")
-            surah_id = transcription_data.get("surah_id")
-            surah_name = transcription_data.get("surah_name")
-            
-            # Backwards compatibility for old cache format
-            if not surah_id:
-                full_text = transcription_data.get("text", "")
-                segments = transcription_data.get("segments", [])
-                result = identify_surah_via_api(segments, full_text)
-                if result:
-                    surah_id, surah_name = result
+
+        # --- Post-Processing (Sync Timestamps) ---
+        # We always do this to ensure fresh sync logic is applied even on cached data
+        
+        surah_id = transcription_data.get("surah_id")
+        surah_name = transcription_data.get("surah_name")
+        
+        # Backwards compatibility for old cache format
+        if not surah_id:
+            full_text = transcription_data.get("text", "")
+            segments = transcription_data.get("segments", [])
+            result = identify_surah_via_api(segments, full_text)
+            if result:
+                surah_id, surah_name = result
 
         # 4. Fetch Specific Text
         surah_db = fetch_surah_text(surah_id)
