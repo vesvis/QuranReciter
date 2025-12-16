@@ -301,11 +301,8 @@ def download_audio(youtube_url):
 
     try:
         print("[YT-DLP] Attempting download with browser impersonation...")
-        # Ensure 'impersonate_target' is set correctly if you have curl_cffi installed
-        # If not, this might throw the error you saw. We catch it below.
-        opts_with_impersonate = base_opts.copy()
-        # Only add this if you are SURE curl_cffi is installed, otherwise it crashes
-        # opts_with_impersonate['impersonate'] = 'chrome' 
+        # Use get_ydl_opts to inject cookies and handle impersonation
+        opts_with_impersonate = get_ydl_opts(base_opts.copy(), use_impersonate=True)
         
         with yt_dlp.YoutubeDL(opts_with_impersonate) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
@@ -316,10 +313,11 @@ def download_audio(youtube_url):
         print(f"[WARN] Primary download failed: {e}")
         print("[YT-DLP] Retrying with fallback options (No impersonation, restricted client)...")
         
-        # Fallback: Simplest possible request
-        # Sometimes 'ios' or 'android' clients work when 'web' is blocked
-        fallback_opts = base_opts.copy()
-        fallback_opts['extractor_args'] = {'youtube': {'player_client': ['android']}}
+        # Fallback: Use get_ydl_opts but disable impersonation, then add custom args
+        fallback_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
+        # Override player client for fallback specific strategy
+        if 'extractor_args' not in fallback_opts: fallback_opts['extractor_args'] = {}
+        fallback_opts['extractor_args']['youtube'] = {'player_client': ['android']}
         
         with yt_dlp.YoutubeDL(fallback_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
