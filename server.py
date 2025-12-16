@@ -354,12 +354,13 @@ def get_audio_duration(audio_filepath):
         print(f"[ERROR] Could not get audio duration: {e}")
         return 0
 
-def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
+def split_audio_chunks(audio_filepath, chunk_duration_minutes=8):
     """
-    Split audio file into chunks using ffmpeg stream copy to stay under Groq's 25MB limit.
+    Split audio file into chunks using ffmpeg stream copy to stay under Groq/OpenAI 25MB limit.
+    Strips video streams (-vn) to ensure we only send audio.
     Returns list of chunk file paths.
     """
-    print(f"[SPLIT] Splitting audio into chunks...")
+    print(f"[SPLIT] Splitting audio into chunks (duration={chunk_duration_minutes}m)...")
     
     file_ext = os.path.splitext(audio_filepath)[1]
     duration = get_audio_duration(audio_filepath)
@@ -373,9 +374,11 @@ def split_audio_chunks(audio_filepath, chunk_duration_minutes=10):
         chunk_path = audio_filepath.replace(file_ext, f'_chunk_{i}{file_ext}')
         
         # Use ffmpeg -c copy for instant splitting
+        # Add -vn to strip video in case we downloaded a video file
+        # Use -acodec copy to stream copy audio
         subprocess.run(
             ['ffmpeg', '-ss', str(start_time), '-t', str(chunk_duration_sec), 
-             '-i', audio_filepath, '-c', 'copy', '-map', '0', '-y', chunk_path],
+             '-i', audio_filepath, '-vn', '-acodec', 'copy', '-map', '0:a?', '-y', chunk_path],
             capture_output=True,
             check=True
         )
@@ -403,7 +406,7 @@ def transcribe_with_openai(audio_filepath):
         # If file is too large, split into chunks
         if file_size_mb > 24: 
             print(f"[TRANSCRIBE] File too large, splitting into chunks...")
-            chunk_files = split_audio_chunks(audio_filepath, chunk_duration_minutes=10)
+            chunk_files = split_audio_chunks(audio_filepath)
             
             # Transcribe each chunk
             for i, chunk_path in enumerate(chunk_files):
@@ -547,7 +550,7 @@ def transcribe_with_groq(audio_filepath):
         # Step 1: Transcription (Groq whisper-large-v3)
         if file_size_mb > 24: 
             print(f"[TRANSCRIBE] File too large, splitting into chunks...")
-            chunk_files = split_audio_chunks(audio_filepath, chunk_duration_minutes=10)
+            chunk_files = split_audio_chunks(audio_filepath)
             
             # Parallel Processing
             print(f"[TRANSCRIBE] Starting parallel processing with 5 workers...")
