@@ -173,7 +173,7 @@ def process_single_chunk(index, chunk_path, client):
                 temperature=0.0
             )
         
-        chunk_offset = index * 10 * 60 # 10 minutes offset per chunk
+        chunk_offset = index * 8 * 60 # 8 minutes offset per chunk
         segments = []
         text_builder = []
         
@@ -422,7 +422,7 @@ def transcribe_with_openai(audio_filepath):
                     )
                 
                 # Calculate time offset for this chunk
-                chunk_offset = i * 10 * 60  # 10 minutes per chunk in seconds
+                chunk_offset = i * 8 * 60  # 8 minutes per chunk in seconds
                 
                 # Extract segments with adjusted timestamps
                 if hasattr(transcription, 'segments'):
