@@ -313,14 +313,19 @@ def download_audio(youtube_url):
         print(f"[WARN] Primary download failed: {e}")
         print("[YT-DLP] Retrying with fallback options (No impersonation, restricted client)...")
         
-        # Fallback: Use get_ydl_opts but disable impersonation, then add custom args
+        # Fallback: Use get_ydl_opts but disable impersonation
         fallback_opts = get_ydl_opts(base_opts.copy(), use_impersonate=False)
-        # Override player client for fallback specific strategy
-        if 'extractor_args' not in fallback_opts: fallback_opts['extractor_args'] = {}
-        fallback_opts['extractor_args']['youtube'] = {'player_client': ['android']}
+        
+        # Remove restrictive player_client args if they exist in base_opts
+        if 'extractor_args' in fallback_opts:
+            fallback_opts['extractor_args']['youtube'] = {'player_client': ['web', 'ios']}
+            
+        # Simplify format check for fallback to ensure we get SOMETHING
+        fallback_opts['format'] = 'bestaudio/best'
         
         with yt_dlp.YoutubeDL(fallback_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
+            # We might get webm or m4a, let's just use what we get
             ext = info.get('ext', 'm4a')
             return f"{info['id']}.{ext}", info['title']
 
