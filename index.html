@@ -219,35 +219,89 @@
         <div
             class="w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-5 md:p-8 mb-10 transition-all hover:bg-white/15">
 
-            <!-- History Dropdown -->
-            <div class="mb-6">
-                <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Recent
-                    Recitations</label>
-                <div class="relative">
-                    <select id="historySelect" onchange="loadFromHistory()"
-                        class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
-                        <option value="">Select a previous recitation...</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
+            <!-- Mode Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-gray-600/30 pb-4">
+                <button id="tab-youtube" onclick="switchMode('youtube')"
+                    class="text-emerald-400 font-bold border-b-2 border-emerald-400 pb-1 text-lg transition-colors">
+                    YouTube Sync
+                </button>
+                <button id="tab-read" onclick="switchMode('read')"
+                    class="text-slate-400 hover:text-emerald-300 font-medium pb-1 text-lg transition-colors border-b-2 border-transparent">
+                    Read Mode
+                </button>
+            </div>
+
+            <!-- YouTube Mode Controls -->
+            <div id="controls-youtube" class="block animate-fade-in-down">
+                <!-- History Dropdown -->
+                <div class="mb-6">
+                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Recent
+                        Recitations</label>
+                    <div class="relative">
+                        <select id="historySelect" onchange="loadFromHistory()"
+                            class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
+                            <option value="">Select a previous recitation...</option>
+                        </select>
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input & Actions -->
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">YouTube
+                            URL</label>
+                        <input type="text" id="urlInput" placeholder="Paste YouTube link here..."
+                            class="w-full bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500 p-4 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all shadow-inner">
+                    </div>
+
+                    <div class="flex gap-3 items-end">
+                        <button onclick="openSettings()"
+                            class="group p-4 bg-slate-700/50 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-600 transition-all active:scale-95 flex items-center justify-center h-[58px] w-[58px]"
+                            title="Settings">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+                        <button onclick="startProcess()" id="processBtn"
+                            class="flex-1 md:flex-none bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-emerald-900/20 transform transition-all active:scale-95 h-[58px] min-w-[120px] flex items-center justify-center">
+                            Process
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Input & Actions -->
-            <div class="flex flex-col md:flex-row gap-4">
-                <div class="flex-1">
-                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">YouTube
-                        URL</label>
-                    <input type="text" id="urlInput" placeholder="Paste YouTube link here..."
-                        class="w-full bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500 p-4 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all shadow-inner">
-                </div>
+            <!-- Read Mode Controls (Hidden by default) -->
+            <div id="controls-read" class="hidden animate-fade-in-down">
+                <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Select
+                    Surah</label>
+                <div class="flex gap-4">
+                    <div class="relative flex-1">
+                        <select id="surahSelect" onchange="loadSelectedSurah()"
+                            class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
+                            <option value="">Choose a Surah...</option>
+                            <!-- Populated by JS -->
+                        </select>
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
+                        </div>
+                    </div>
 
-                <div class="flex gap-3 items-end">
                     <button onclick="openSettings()"
-                        class="group p-4 bg-slate-700/50 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-600 transition-all active:scale-95 flex items-center justify-center h-[58px] w-[58px]"
+                        class="group p-4 bg-slate-700/50 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-600 transition-all active:scale-95 flex items-center justify-center h-[52px] w-[58px]"
                         title="Settings">
                         <svg xmlns="http://www.w3.org/2000/svg"
                             class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" fill="none"
@@ -257,10 +311,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                    </button>
-                    <button onclick="startProcess()" id="processBtn"
-                        class="flex-1 md:flex-none bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-emerald-900/20 transform transition-all active:scale-95 h-[58px] min-w-[120px] flex items-center justify-center">
-                        Process
                     </button>
                 </div>
             </div>
@@ -1367,14 +1417,164 @@
 
                         // Check for waiting worker on load
                         if (reg.waiting) {
-                            // If there's a worker waiting, we could show the toast immediately
-                            // checking if it's different from active
                             showUpdateToast();
                         }
                     })
                     .catch(err => console.log('Service Worker Failed', err));
             }
         };
+        // --- Read Mode Logic ---
+        let surahListCache = null;
+
+        function switchMode(mode) {
+            const tabYoutube = document.getElementById('tab-youtube');
+            const tabRead = document.getElementById('tab-read');
+            const controlsYoutube = document.getElementById('controls-youtube');
+            const controlsRead = document.getElementById('controls-read');
+            const resultsArea = document.getElementById('resultsArea');
+            const stickyPlayer = document.getElementById('sticky-player');
+
+            if (mode === 'youtube') {
+                // Activate YouTube Tab
+                tabYoutube.classList.add('text-emerald-400', 'border-emerald-400');
+                tabYoutube.classList.remove('text-slate-400', 'border-transparent');
+
+                tabRead.classList.add('text-slate-400', 'border-transparent');
+                tabRead.classList.remove('text-emerald-400', 'border-emerald-400');
+
+                // Show YouTube Controls
+                controlsYoutube.classList.remove('hidden');
+                controlsRead.classList.add('hidden');
+
+                // If we were in read mode, we might want to hide results until processed
+                // But if we have a previous youtube result, we could keep it. 
+                // For simplicity, let's clear results if switching modes to avoid confusion
+                resultsArea.classList.add('hidden');
+                stickyPlayer.classList.remove('hidden'); // Show player for YouTube
+            } else {
+                // Activate Read Tab
+                tabRead.classList.add('text-emerald-400', 'border-emerald-400');
+                tabRead.classList.remove('text-slate-400', 'border-transparent');
+
+                tabYoutube.classList.add('text-slate-400', 'border-transparent');
+                tabYoutube.classList.remove('text-emerald-400', 'border-emerald-400');
+
+                // Show Read Controls
+                controlsRead.classList.remove('hidden');
+                controlsYoutube.classList.add('hidden');
+
+                // Fetch Surahs if not loaded
+                if (!surahListCache) {
+                    fetchSurahs();
+                }
+
+                // Prepare Setup
+                resultsArea.classList.add('hidden');
+                stickyPlayer.classList.add('hidden'); // Hide player for Read Mode
+            }
+        }
+
+        async function fetchSurahs() {
+            const select = document.getElementById('surahSelect');
+            select.disabled = true;
+            select.innerHTML = '<option>Loading Surahs...</option>';
+
+            try {
+                // Use our new backend endpoint
+                const response = await fetch(`${API_BASE_URL}/surahs`);
+                if (!response.ok) throw new Error('Failed to fetch surahs');
+
+                const surahs = await response.json();
+                surahListCache = surahs;
+
+                // Populate Dropdown
+                select.innerHTML = '<option value="">Choose a Surah...</option>';
+                surahs.forEach(surah => {
+                    const option = document.createElement('option');
+                    option.value = surah.number;
+                    option.textContent = `${surah.number}. ${surah.name} (${surah.englishNameTranslation})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Error loading surahs:", e);
+                select.innerHTML = '<option>Error loading list</option>';
+            } finally {
+                select.disabled = false;
+            }
+        }
+
+        async function loadSelectedSurah() {
+            const surahNumber = document.getElementById('surahSelect').value;
+            if (!surahNumber) return;
+
+            // Show loading state
+            const resultsArea = document.getElementById('resultsArea');
+            const quranContainer = document.getElementById('quranContainer');
+            const surahTitle = document.getElementById('surahTitle');
+            const surahDetails = document.getElementById('surahDetails');
+
+            resultsArea.classList.remove('hidden');
+            quranContainer.innerHTML = '<div class="text-center p-10"><div class="animate-spin h-10 w-10 border-4 border-emerald-500 rounded-full border-t-transparent mx-auto"></div></div>';
+
+            // Set basics from cache
+            const surahInfo = surahListCache.find(s => s.number == surahNumber);
+            if (surahInfo) {
+                surahTitle.textContent = surahInfo.name;
+                surahDetails.textContent = `${surahInfo.revelationType} • ${surahInfo.numberOfAyahs} Ayahs`;
+            }
+
+            try {
+                // Fetch text from backend
+                const response = await fetch(`${API_BASE_URL}/surah/${surahNumber}`);
+                if (!response.ok) throw new Error('Failed to fetch text');
+
+                const ayahs = await response.json();
+                renderSimpleSurah(ayahs, surahNumber);
+
+            } catch (e) {
+                console.error("Error fetching text:", e);
+                quranContainer.innerHTML = '<p class="text-center text-red-500">Failed to load Surah text.</p>';
+            }
+        }
+
+        function renderSimpleSurah(ayahs, surahNumber) {
+            const container = document.getElementById('quranContainer');
+            container.innerHTML = ''; // Clear
+
+            // Add Basmala except for Surah 1 (handled in text usually) and 9
+            if (surahNumber != 1 && surahNumber != 9) {
+                const basmala = document.createElement('div');
+                basmala.className = 'basmala';
+                basmala.textContent = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
+                container.appendChild(basmala);
+            }
+
+            // Create wrapper
+            const wrapper = document.createElement('div');
+            // Using standard quran-text class but ensuring line-height is good
+            wrapper.className = 'leading-loose text-justify';
+
+            ayahs.forEach(item => {
+                const span = document.createElement('span');
+                span.className = 'ayah-span hover:bg-emerald-50 cursor-default'; // Simplify interaction
+                span.textContent = item.text;
+
+                // Add ayah marker
+                const marker = document.createElement('span');
+                marker.className = 'ayah-marker';
+                marker.innerHTML = `۝ <span class="ayah-number">${item.ayah}</span>`;
+
+                span.appendChild(marker);
+                wrapper.appendChild(span);
+
+                // Add generic space
+                wrapper.appendChild(document.createTextNode(' '));
+            });
+
+            container.appendChild(wrapper);
+        }
+
+        // --- Existing Code Ends ---
     </script>
 </body>
 
