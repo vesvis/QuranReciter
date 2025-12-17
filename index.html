@@ -1542,12 +1542,28 @@
             const container = document.getElementById('quranContainer');
             container.innerHTML = ''; // Clear
 
-            // Add Basmala except for Surah 1 (handled in text usually) and 9
-            if (surahNumber != 1 && surahNumber != 9) {
-                const basmala = document.createElement('div');
-                basmala.className = 'basmala';
-                basmala.textContent = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
-                container.appendChild(basmala);
+            let ayahsToRender = ayahs;
+
+            // Handle Basmala Logic
+            if (surahNumber == 1) {
+                // For Surah 1, the first ayah IS the Basmala. 
+                // We extract it and render it centered.
+                if (ayahs.length > 0) {
+                    const basmalaText = ayahs[0].text;
+                    const basmalaDiv = document.createElement('div');
+                    basmalaDiv.className = 'basmala';
+                    basmalaDiv.textContent = basmalaText;
+                    container.appendChild(basmalaDiv);
+
+                    // Remove first ayah from standard flow
+                    ayahsToRender = ayahs.slice(1);
+                }
+            } else if (surahNumber != 9) {
+                // For all other Surahs (except 9), we add the standard Basmala header
+                const basmalaDiv = document.createElement('div');
+                basmalaDiv.className = 'basmala';
+                basmalaDiv.textContent = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
+                container.appendChild(basmalaDiv);
             }
 
             // Create wrapper
@@ -1555,7 +1571,7 @@
             // Using standard quran-text class but ensuring line-height is good
             wrapper.className = 'leading-loose text-justify';
 
-            ayahs.forEach(item => {
+            ayahsToRender.forEach(item => {
                 const span = document.createElement('span');
                 span.className = 'ayah-span hover:bg-emerald-50 cursor-default'; // Simplify interaction
                 span.textContent = item.text;
