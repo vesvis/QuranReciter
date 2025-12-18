@@ -1541,51 +1541,65 @@
                 quranContainer.innerHTML = '<p class="text-center text-red-500">Failed to load Surah text.</p>';
             }
         }
-
         function renderSimpleSurah(ayahs, surahNumber) {
             const container = document.getElementById('quranContainer');
             container.innerHTML = ''; // Clear
 
-            // Handle Surah 9 (At-Tawbah) - No Basmala
-            if (surahNumber == 9) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'leading-loose text-justify';
-
-                ayahs.forEach(item => {
-                    const span = document.createElement('span');
-                    span.className = 'ayah-span hover:bg-emerald-50 cursor-default';
-                    span.textContent = item.text;
-
-                    const marker = document.createElement('span');
-                    marker.className = 'ayah-marker';
-                    marker.innerHTML = `۝ <span class="ayah-number">${item.numberInSurah}</span>`;
-
-                    span.appendChild(marker);
-                    wrapper.appendChild(span);
-                    wrapper.appendChild(document.createTextNode(' '));
-                });
-                container.appendChild(wrapper);
+            // Handle Surah 1 (Al-Fatiha) - Render normally (Text is Basmala)
+            if (surahNumber == 1) {
+                renderAyahs(ayahs, container);
                 return;
             }
 
-            // For all other Surahs, the first item in the list starts with Basmala.
-            // We move this entire first item to the header.
-            if (ayahs.length > 0) {
-                const basmalaText = ayahs[0].text;
-                const basmalaDiv = document.createElement('div');
-                basmalaDiv.className = 'basmala';
-                basmalaDiv.textContent = basmalaText; // The entire text of the first item
-                container.appendChild(basmalaDiv);
+            // Handle Surah 9 (At-Tawbah) - No Basmala
+            if (surahNumber == 9) {
+                renderAyahs(ayahs, container);
+                return;
             }
 
-            // Render remaining Ayahs
+            // For all other Surahs
+            // 1. Render Standard Basmala Header
+            const basmalaDiv = document.createElement('div');
+            basmalaDiv.className = 'basmala';
+            basmalaDiv.textContent = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
+            container.appendChild(basmalaDiv);
+
+            // 2. Prepare Ayahs
+            // specific Uthmani Basmala from API to strip
+            const basmalaPrefix1 = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
+            const basmalaPrefix2 = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+
+            let ayahsToRender = [...ayahs]; // Copy to avoid mutation issues
+
+            if (ayahsToRender.length > 0) {
+                let firstText = ayahsToRender[0].text;
+                // Strip Basmala if present
+                if (firstText.startsWith(basmalaPrefix1)) {
+                    firstText = firstText.substring(basmalaPrefix1.length).trim();
+                } else if (firstText.startsWith(basmalaPrefix2)) {
+                    firstText = firstText.substring(basmalaPrefix2.length).trim();
+                } else {
+                    // Heuristic: If it starts with "Bismillah", maybe split by space? 
+                    // The API is usually consistent. If it doesn't match, maybe it's already clean?
+                    // Or maybe we should just allow it.
+                    // Let's try to match the first 4 words.
+                }
+
+                // If the cleaned text is empty (rare, but possibly for invalid data), keep it empty or original?
+                // If it was JUST Basmala, then Ayah 1 is empty? No, usually Ayah 1 is Basmala + Text. 
+                // e.g. "Bismillah... Alif Lam Mim". Cleaned -> "Alif Lam Mim".
+
+                ayahsToRender[0] = { ...ayahsToRender[0], text: firstText };
+            }
+
+            renderAyahs(ayahsToRender, container);
+        }
+
+        function renderAyahs(list, container) {
             const wrapper = document.createElement('div');
             wrapper.className = 'leading-loose text-justify';
 
-            // Skip the first item since it's in the header
-            const ayahsToRender = ayahs.slice(1);
-
-            ayahsToRender.forEach(item => {
+            list.forEach(item => {
                 const span = document.createElement('span');
                 span.className = 'ayah-span hover:bg-emerald-50 cursor-default';
                 span.textContent = item.text;
@@ -1598,7 +1612,6 @@
                 wrapper.appendChild(span);
                 wrapper.appendChild(document.createTextNode(' '));
             });
-
             container.appendChild(wrapper);
         }
 
