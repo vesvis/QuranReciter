@@ -1481,11 +1481,12 @@
             select.innerHTML = '<option>Loading Surahs...</option>';
 
             try {
-                // Use our new backend endpoint
-                const response = await fetch(`${API_BASE_URL}/surahs`);
+                // Direct call to external API
+                const response = await fetch('https://api.alquran.cloud/v1/surah');
                 if (!response.ok) throw new Error('Failed to fetch surahs');
 
-                const surahs = await response.json();
+                const data = await response.json();
+                const surahs = data.data; // API structure is { code: 200, status: "OK", data: [...] }
                 surahListCache = surahs;
 
                 // Populate Dropdown
