@@ -1527,10 +1527,13 @@
 
             try {
                 // Fetch text from backend
-                const response = await fetch(`${API_BASE_URL}/surah/${surahNumber}`);
+                const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`);
                 if (!response.ok) throw new Error('Failed to fetch text');
 
-                const ayahs = await response.json();
+                const data = await response.json();
+                const ayahs = data.data.ayahs;
+                if (data.data.name) surahTitle.textContent = data.data.name;
+
                 renderSimpleSurah(ayahs, surahNumber);
 
             } catch (e) {
