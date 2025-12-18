@@ -1494,7 +1494,7 @@
                 surahs.forEach(surah => {
                     const option = document.createElement('option');
                     option.value = surah.number;
-                    option.textContent = `${surah.number}. ${surah.name} (${surah.englishNameTranslation})`;
+                    option.textContent = `${surah.number}. ${surah.englishName} (${surah.englishNameTranslation})`;
                     select.appendChild(option);
                 });
             } catch (e) {
