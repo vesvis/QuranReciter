@@ -897,6 +897,7 @@
 
             // Update URL input for reference
             document.getElementById('urlInput').value = `https://www.youtube.com/watch?v=${videoId}`;
+            document.getElementById('sticky-player').classList.remove('hidden');
 
             const processBtn = document.getElementById('processBtn');
             processBtn.disabled = true;
