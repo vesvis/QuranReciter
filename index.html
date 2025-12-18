@@ -1565,9 +1565,8 @@
             container.appendChild(basmalaDiv);
 
             // 2. Prepare Ayahs
-            // specific Uthmani Basmala from API to strip
-            const basmalaPrefix1 = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
-            const basmalaPrefix2 = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+            // specific Uthmani Basmala from API to strip (Exact match from debug: No Tatweel)
+            const basmalaPrefix1 = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
 
             let ayahsToRender = [...ayahs]; // Copy to avoid mutation issues
 
@@ -1576,19 +1575,11 @@
                 // Strip Basmala if present
                 if (firstText.startsWith(basmalaPrefix1)) {
                     firstText = firstText.substring(basmalaPrefix1.length).trim();
-                } else if (firstText.startsWith(basmalaPrefix2)) {
-                    firstText = firstText.substring(basmalaPrefix2.length).trim();
-                } else {
-                    // Heuristic: If it starts with "Bismillah", maybe split by space? 
-                    // The API is usually consistent. If it doesn't match, maybe it's already clean?
-                    // Or maybe we should just allow it.
-                    // Let's try to match the first 4 words.
+                } else if (firstText.startsWith("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")) {
+                    firstText = firstText.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
                 }
 
-                // If the cleaned text is empty (rare, but possibly for invalid data), keep it empty or original?
-                // If it was JUST Basmala, then Ayah 1 is empty? No, usually Ayah 1 is Basmala + Text. 
-                // e.g. "Bismillah... Alif Lam Mim". Cleaned -> "Alif Lam Mim".
-
+                // Update the first ayah text
                 ayahsToRender[0] = { ...ayahsToRender[0], text: firstText };
             }
 
