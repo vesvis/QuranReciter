@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-reciter-v8';
+const CACHE_NAME = 'quran-reciter-v9';
 const ASSETS_TO_CACHE = [
     '/',
     // '/index.html', // Removed as it is covered by '/' and might cause 404
@@ -30,7 +30,19 @@ self.addEventListener('install', (event) => {
 // Activate Event: Clean up old caches
 self.addEventListener('activate', (event) => {
     console.log('[SW] Activating Service Worker...');
-    event.waitUntil(self.clients.claim());
+    const cacheWhitelist = [CACHE_NAME, 'audio-cache', 'api-cache'];
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (!cacheWhitelist.includes(cacheName)) {
+                        console.log('[SW] Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
 // Fetch Event: Intercept requests
