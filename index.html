@@ -1402,53 +1402,7 @@
         // --- Read Mode Logic ---
         let surahListCache = null;
 
-        function switchMode(mode) {
-            const tabYoutube = document.getElementById('tab-youtube');
-            const tabRead = document.getElementById('tab-read');
-            const controlsYoutube = document.getElementById('controls-youtube');
-            const controlsRead = document.getElementById('controls-read');
-            const resultsArea = document.getElementById('resultsArea');
-            const stickyPlayer = document.getElementById('sticky-player');
 
-            if (mode === 'youtube') {
-                // Activate YouTube Tab
-                tabYoutube.classList.add('text-emerald-400', 'border-emerald-400');
-                tabYoutube.classList.remove('text-slate-400', 'border-transparent');
-
-                tabRead.classList.add('text-slate-400', 'border-transparent');
-                tabRead.classList.remove('text-emerald-400', 'border-emerald-400');
-
-                // Show YouTube Controls
-                controlsYoutube.classList.remove('hidden');
-                controlsRead.classList.add('hidden');
-
-                // If we were in read mode, we might want to hide results until processed
-                // But if we have a previous youtube result, we could keep it. 
-                // For simplicity, let's clear results if switching modes to avoid confusion
-                resultsArea.classList.add('hidden');
-                stickyPlayer.classList.remove('hidden'); // Show player for YouTube
-            } else {
-                // Activate Read Tab
-                tabRead.classList.add('text-emerald-400', 'border-emerald-400');
-                tabRead.classList.remove('text-slate-400', 'border-transparent');
-
-                tabYoutube.classList.add('text-slate-400', 'border-transparent');
-                tabYoutube.classList.remove('text-emerald-400', 'border-emerald-400');
-
-                // Show Read Controls
-                controlsRead.classList.remove('hidden');
-                controlsYoutube.classList.add('hidden');
-
-                // Fetch Surahs if not loaded
-                if (!surahListCache) {
-                    fetchSurahs();
-                }
-
-                // Prepare Setup
-                resultsArea.classList.add('hidden');
-                stickyPlayer.classList.add('hidden'); // Hide player for Read Mode
-            }
-        }
 
         async function fetchSurahs() {
             const select = document.getElementById('surahSelect');
@@ -1491,6 +1445,7 @@
             const surahDetails = document.getElementById('surahDetails');
 
             resultsArea.classList.remove('hidden');
+            document.getElementById('sticky-player').classList.add('hidden'); // Ensure player is hidden
             quranContainer.innerHTML = '<div class="text-center p-10"><div class="animate-spin h-10 w-10 border-4 border-emerald-500 rounded-full border-t-transparent mx-auto"></div></div>';
 
             // Set basics from cache
