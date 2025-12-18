@@ -219,40 +219,11 @@
         <div
             class="w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-5 md:p-8 mb-10 transition-all hover:bg-white/15">
 
-            <!-- Mode Tabs -->
-            <div class="flex space-x-4 mb-6 border-b border-gray-600/30 pb-4">
-                <button id="tab-youtube" onclick="switchMode('youtube')"
-                    class="text-emerald-400 font-bold border-b-2 border-emerald-400 pb-1 text-lg transition-colors">
-                    YouTube Sync
-                </button>
-                <button id="tab-read" onclick="switchMode('read')"
-                    class="text-slate-400 hover:text-emerald-300 font-medium pb-1 text-lg transition-colors border-b-2 border-transparent">
-                    Read Mode
-                </button>
-            </div>
+            <!-- Unified Controls -->
+            <div id="controls-unified" class="block animate-fade-in-down">
 
-            <!-- YouTube Mode Controls -->
-            <div id="controls-youtube" class="block animate-fade-in-down">
-                <!-- History Dropdown -->
-                <div class="mb-6">
-                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Recent
-                        Recitations</label>
-                    <div class="relative">
-                        <select id="historySelect" onchange="loadFromHistory()"
-                            class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
-                            <option value="">Select a previous recitation...</option>
-                        </select>
-                        <div
-                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input & Actions -->
-                <div class="flex flex-col md:flex-row gap-4">
+                <!-- Row 1: YouTube Input & Process -->
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
                     <div class="flex-1">
                         <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">YouTube
                             URL</label>
@@ -279,14 +250,30 @@
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Read Mode Controls (Hidden by default) -->
-            <div id="controls-read" class="hidden animate-fade-in-down">
-                <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Select
-                    Surah</label>
-                <div class="flex gap-4">
-                    <div class="relative flex-1">
+                <!-- Row 2: Recent Recitations -->
+                <div class="mb-6">
+                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Recent
+                        Recitations</label>
+                    <div class="relative">
+                        <select id="historySelect" onchange="loadFromHistory()"
+                            class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
+                            <option value="">Select a previous recitation...</option>
+                        </select>
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Select Surah to Read -->
+                <div>
+                    <label class="block text-emerald-400 text-sm font-bold uppercase tracking-wider mb-2">Read Any
+                        Surah</label>
+                    <div class="relative">
                         <select id="surahSelect" onchange="loadSelectedSurah()"
                             class="block w-full appearance-none bg-slate-800/50 border border-slate-600 text-slate-200 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-slate-800 focus:border-emerald-500 transition-colors cursor-pointer">
                             <option value="">Choose a Surah...</option>
@@ -299,20 +286,8 @@
                             </svg>
                         </div>
                     </div>
-
-                    <button onclick="openSettings()"
-                        class="group p-4 bg-slate-700/50 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-600 transition-all active:scale-95 flex items-center justify-center h-[52px] w-[58px]"
-                        title="Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    </button>
                 </div>
+
             </div>
         </div>
 
