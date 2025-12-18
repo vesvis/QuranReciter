@@ -1576,14 +1576,28 @@
             wrapper.className = 'leading-loose text-justify';
 
             ayahsToRender.forEach(item => {
+                let text = item.text;
+
+                // Clean up Basmala from the first Ayah of non-Fatiha surahs
+                // The API often includes it at the start of the first verse string
+                if (item.numberInSurah === 1 && surahNumber != 1) {
+                    const basmala = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ";
+                    // Check if it starts with Basmala (allowing for some spacing/variation)
+                    if (text.startsWith(basmala)) {
+                        text = text.replace(basmala, "").trim();
+                    } else if (text.startsWith("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")) { // Simple encoding
+                        text = text.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
+                    }
+                }
+
                 const span = document.createElement('span');
                 span.className = 'ayah-span hover:bg-emerald-50 cursor-default'; // Simplify interaction
-                span.textContent = item.text;
+                span.textContent = text;
 
                 // Add ayah marker
                 const marker = document.createElement('span');
                 marker.className = 'ayah-marker';
-                marker.innerHTML = `۝ <span class="ayah-number">${item.ayah}</span>`;
+                marker.innerHTML = `۝ <span class="ayah-number">${item.numberInSurah}</span>`;
 
                 span.appendChild(marker);
                 wrapper.appendChild(span);
