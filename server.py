@@ -758,49 +758,6 @@ def repair_cache():
 class VideoRequest(BaseModel):
     url: str
 
-# Cache for Surah list
-SURAH_LIST_CACHE = None
-
-def fetch_surah_list():
-    """Fetches the list of all Surahs from the API."""
-    global SURAH_LIST_CACHE
-    if SURAH_LIST_CACHE:
-        return SURAH_LIST_CACHE
-        
-    try:
-        print("[FETCH] Fetching Surah list...")
-        response = requests.get("http://api.alquran.cloud/v1/surah", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if "data" in data:
-                # simplify data for frontend
-                simple_list = []
-                for s in data["data"]:
-                    simple_list.append({
-                        "number": s["number"],
-                        "name": s["englishName"],
-                        "englishNameTranslation": s["englishNameTranslation"],
-                        "numberOfAyahs": s["numberOfAyahs"],
-                        "revelationType": s["revelationType"]
-                    })
-                SURAH_LIST_CACHE = simple_list
-                return simple_list
-    except Exception as e:
-        print(f"[ERROR] Failed to fetch Surah list: {e}")
-    return []
-
-@app.get("/surahs")
-async def get_surahs():
-    """Get list of all Surahs."""
-    return fetch_surah_list()
-
-@app.get("/surah/{surah_number}")
-async def get_surah_text(surah_number: int):
-    """Get full text for a specific Surah."""
-    text = fetch_surah_text(surah_number)
-    if not text:
-        raise HTTPException(status_code=404, detail="Surah not found or failed to fetch")
-    return text
 
 
 @app.get("/recitation/{video_id}")
