@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-reciter-v9';
+const CACHE_NAME = 'quran-reciter-v10';
 const ASSETS_TO_CACHE = [
     '/',
     // '/index.html', // Removed as it is covered by '/' and might cause 404
@@ -49,7 +49,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // 0. Ignore POST requests (cannot be cached)
+    // 0. Ignore External API (Bypass SW entirely)
+    if (url.href.includes('api.alquran.cloud')) {
+        return;
+    }
+
+    // 1. Ignore POST requests (cannot be cached)
     if (event.request.method === 'POST') {
         return;
     }

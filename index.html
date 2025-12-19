@@ -1430,7 +1430,7 @@
                 });
             } catch (e) {
                 console.error("Error loading surahs:", e);
-                select.innerHTML = '<option>Error loading list</option>';
+                select.innerHTML = `<option>Error: ${e.message}</option>`;
             } finally {
                 select.disabled = false;
             }
