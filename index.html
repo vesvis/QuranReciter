@@ -1389,14 +1389,27 @@
             }
 
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('/service-worker.js?v=11')
                     .then(reg => {
-                        console.log('Service Worker Registered', reg);
+                        console.log('Service Worker Registered (v11)', reg);
 
-                        // Check for waiting worker on load
+                        // Force update if one is waiting
                         if (reg.waiting) {
+                            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
                             showUpdateToast();
                         }
+
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        // Update available
+                                        showUpdateToast();
+                                    }
+                                }
+                            };
+                        };
                     })
                     .catch(err => console.log('Service Worker Failed', err));
             }
