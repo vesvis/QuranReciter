@@ -1414,6 +1414,9 @@
                     .catch(err => console.log('Service Worker Failed', err));
             }
         };
+    </script>
+    <script src="surah-data.js"></script>
+    <script>
         // --- Read Mode Logic ---
         let surahListCache = null;
 
@@ -1422,6 +1425,17 @@
         async function fetchSurahs() {
             const select = document.getElementById('surahSelect');
             select.disabled = true;
+
+            // 1. Try Local Static Data (Fastest/Robust)
+            if (typeof SURAH_DATA !== 'undefined' && SURAH_DATA.length > 0) {
+                console.log("[DATA] Using static Surah list");
+                surahListCache = SURAH_DATA;
+                populateSurahDropdown(select, SURAH_DATA);
+                select.disabled = false;
+                return;
+            }
+
+            // 2. Fallback: Network Fetch (If static file missing)
             select.innerHTML = '<option>Loading Surahs...</option>';
 
             try {
@@ -1450,14 +1464,8 @@
                 const surahs = data.data; // API structure is { code: 200, status: "OK", data: [...] }
                 surahListCache = surahs;
 
-                // Populate Dropdown
-                select.innerHTML = '<option value="">Choose a Surah...</option>';
-                surahs.forEach(surah => {
-                    const option = document.createElement('option');
-                    option.value = surah.number;
-                    option.textContent = `${surah.number}. ${surah.englishName} (${surah.englishNameTranslation})`;
-                    select.appendChild(option);
-                });
+                populateSurahDropdown(select, surahs);
+
             } catch (e) {
                 console.error("Error loading surahs:", e);
                 // Display detailed error for debugging
@@ -1466,6 +1474,16 @@
             } finally {
                 select.disabled = false;
             }
+        }
+
+        function populateSurahDropdown(select, surahs) {
+            select.innerHTML = '<option value="">Choose a Surah...</option>';
+            surahs.forEach(surah => {
+                const option = document.createElement('option');
+                option.value = surah.number;
+                option.textContent = `${surah.number}. ${surah.englishName} (${surah.englishNameTranslation})`;
+                select.appendChild(option);
+            });
         }
 
         async function loadSelectedSurah() {

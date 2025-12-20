@@ -1,8 +1,7 @@
-const CACHE_NAME = 'quran-reciter-v10';
+const CACHE_NAME = 'quran-reciter-v11';
 const ASSETS_TO_CACHE = [
     '/',
-    // '/index.html', // Removed as it is covered by '/' and might cause 404
-    // 'https://cdn.tailwindcss.com', // Removed due to CORS issues
+    '/surah-data.js', // Critical static data
     'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Cairo:wght@400;700&family=Lateef:wght@400;700&family=Rakkas&display=swap'
 ];
 
