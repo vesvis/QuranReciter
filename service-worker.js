@@ -1,7 +1,6 @@
-const CACHE_NAME = 'quran-reciter-v11';
+const CACHE_NAME = 'quran-reciter-v12';
 const ASSETS_TO_CACHE = [
     '/',
-    '/surah-data.js', // Critical static data
     'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Cairo:wght@400;700&family=Lateef:wght@400;700&family=Rakkas&display=swap'
 ];
 
@@ -50,6 +49,11 @@ self.addEventListener('fetch', (event) => {
 
     // 0. Ignore External API (Bypass SW entirely)
     if (url.href.includes('api.alquran.cloud')) {
+        return;
+    }
+
+    // 0b. Bypass critical static data (always fetch fresh to prevent stale cache issues)
+    if (url.pathname.includes('surah-data.js')) {
         return;
     }
 
